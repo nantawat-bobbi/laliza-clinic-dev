@@ -4693,7 +4693,13 @@ function renderTableAll(){
     html+=`<th class="th-month" colspan="${aprDays.length}">เมษายน</th>`;
     html+=`<th class="th-month" colspan="${mayDays.length}">พฤษภาคม</th></tr><tr>`;
     DAYS.forEach(day=>{
-      html+=`<th><div class="th-dayname ${day.we?'we':''}">${day.name}</div><div class="th-daynum ${day.we?'we':''}">${day.date}</div></th>`;
+      const hday = isHoliday(day.date, day.month);
+      const hdotTitle = hday ? ` title="🎌 ${hday}"` : '';
+      html+=`<th class="${day.isToday?'today-col':''}" style="${day.dow===0?'border-left:2px solid rgba(220,38,38,0.25);':''}">
+        <div class="th-dayname ${day.we?'we':''}">${day.name}</div>
+        <div class="th-daynum ${day.we?'we':''} ${hday?'holiday':''}">${day.date}</div>
+        <div class="holiday-dot ${hday?'visible':''}"${hdotTitle}></div>
+      </th>`;
     });
     html+=`</tr></thead><tbody>`;
 
@@ -4705,7 +4711,9 @@ function renderTableAll(){
       DAYS.forEach((day,di)=>{
         const ld=getLeaveData(bLeaves,ei,di);
         const isSun2 = day.dow===0;
-        html+=`<td class="dc ${day.we?'wec':''} ${isSun2?'sun':''} locked" title="${emp.name||''} ${day.date}/${day.month}${ld?' - '+ld.code:''}">`;
+        const hday = isHoliday(day.date, day.month);
+        const cls = ['dc', day.wkClass, isSun2?'sun':'', hday?'holiday-col':'', day.isToday?'today-col':'', 'locked'].filter(Boolean).join(' ');
+        html+=`<td class="${cls}" title="${emp.name||''} ${day.date}/${day.month}${ld?' - '+ld.code:''}">`;
         if(ld) html+=`<div class="ld ${getClass(ld.code)}">${ld.code}</div>`;
         html+=`</td>`;
       });
