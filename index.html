@@ -4679,10 +4679,16 @@ function renderTableAll(){
         <span style="margin-left:auto;font-size:11px;opacity:0.7">${allEmps.length} คน</span>
       </div>
       <div class="table-wrapper" style="border-radius:0 0 12px 12px;border-top:none;">
-      <div class="table-scroll"><table><thead>
+      <div class="table-scroll"><table style="table-layout:fixed;width:100%;min-width:${130+90+(28*DAYS.length)}px;border-collapse:collapse;">
+      <colgroup>
+        <col style="width:130px">
+        <col style="width:90px">
+        ${DAYS.map(()=>'<col style="width:28px">').join('')}
+      </colgroup>
+      <thead>
       <tr>
-        <th class="th-info" style="min-width:150px" rowspan="2">ชื่อ</th>
-        <th class="th-info" style="min-width:80px" rowspan="2">ตำแหน่ง</th>`;
+        <th class="th-info" rowspan="2">ชื่อ</th>
+        <th class="th-info" rowspan="2">ตำแหน่ง</th>`;
     html+=`<th class="th-month" colspan="${aprDays.length}">เมษายน</th>`;
     html+=`<th class="th-month" colspan="${mayDays.length}">พฤษภาคม</th></tr><tr>`;
     DAYS.forEach(day=>{
