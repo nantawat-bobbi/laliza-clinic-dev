@@ -1587,7 +1587,7 @@ td.dc { padding: 4px 2px !important; }
 </div>
 
 <!-- USER MODAL -->
-<div class="modal-overlay" id="userModal" onclick="if(event.target===this)closeUserModal()">
+<div class="modal-overlay" id="userModal" onclick="if(event.target===this)closeUserModal()" style="display:none">
   <div class="modal-box" style="max-width:520px;">
     <div class="modal-header">
       <h3 id="userModalTitle">เพิ่มผู้ใช้งาน</h3>
@@ -3456,7 +3456,7 @@ function openAddUser(){
   PAGE_PERMS.forEach(p=>{ const el=document.getElementById('up_'+p.id); if(el) el.checked = ['overview','table','dashboard','stats'].includes(p.id); });
   renderBranchPerm([]);
   document.getElementById('uDeleteBtn').style.display='none';
-  document.getElementById('userModal').classList.add('open');
+  document.getElementById('userModal').style.display='flex';
 }
 
 function openEditUser(uid){
@@ -3486,7 +3486,7 @@ function renderBranchPerm(selected){
 }
 
 function closeUserModal(){
-  document.getElementById('userModal').classList.remove('open');
+  document.getElementById('userModal').style.display='none';
 }
 
 function saveUser(){
