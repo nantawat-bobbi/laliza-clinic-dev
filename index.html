@@ -2031,25 +2031,46 @@ function selectLoginBranch(id){
 }
 
 function doLogin(){
-  if(!selectedLoginBranch){ showLoginError('กรุณาเลือกสาขาก่อน'); return; }
   const pw = document.getElementById('loginPassword').value.trim();
   if(!pw){ showLoginError('กรุณาใส่รหัสผ่าน'); return; }
-  // clear session เก่าก่อนเสมอ
   localStorage.removeItem('laliza_session');
 
-  let isManager = false;
-  let isAdmin = false;
-  let branchId = selectedLoginBranch;
-
+  // ── Step 1: เช็ค Admin 16698 ──
   if(pw === ADMIN_PASSWORD){
-    isManager = true;
-    isAdmin = true;
-  } else {
+    _doLoginSuccess({ branchId: selectedLoginBranch||'b1', isManager:true, isAdmin:true, userId:null, pages:null, branches:null });
+    return;
+  }
+
+  // ── Step 2: เช็ค users/ ใน Firebase ──
+  loadUsers(()=>{
+    const userEntry = Object.entries(USERS).find(([uid,u])=>u.password===pw);
+    if(userEntry){
+      const [uid, u] = userEntry;
+      // user มีสาขาที่กำหนดไว้ — ใช้สาขาแรกที่เลือก หรือสาขาที่ user กด
+      const userBranches = u.branches||[];
+      let branchId = selectedLoginBranch;
+      // ถ้า user ไม่มีสิทธิ์สาขานั้น → ใช้สาขาแรกที่มีสิทธิ์
+      if(userBranches.length > 0 && !userBranches.includes(branchId)){
+        branchId = userBranches[0];
+      }
+      if(userBranches.length === 0){
+        showLoginError('ผู้ใช้นี้ยังไม่ได้รับสิทธิ์สาขาใด กรุณาติดต่อ Admin'); return;
+      }
+      _doLoginSuccess({
+        branchId,
+        isManager: !!(u.pages&&u.pages.edit),
+        isAdmin: false,
+        userId: uid,
+        pages: u.pages||{},
+        branches: userBranches,
+        userName: u.name,
+      });
+      return;
+    }
+
+    // ── Step 3: fallback รหัสสาขาเดิม ──
+    if(!selectedLoginBranch){ showLoginError('กรุณาเลือกสาขาก่อน'); return; }
     const b = BRANCHES.find(x=>x.id===selectedLoginBranch);
-    // เช็ครหัสจาก Firebase และ default data
-    const managerPw = (b && b.password) || '';
-    const staffPw = (b && b.staffPassword) || '';
-    // หา staffPassword จาก default BRANCHES ในโค้ด (กันกรณี Firebase ไม่มี field นี้)
     const defaultB = [
       {id:'b7',p:'847291',s:'8472'},{id:'b8',p:'362058',s:'3620'},
       {id:'b3',p:'519374',s:'5193'},{id:'b4',p:'728163',s:'7281'},
@@ -2057,19 +2078,21 @@ function doLogin(){
       {id:'b1',p:'637482',s:'6374'},{id:'b2',p:'291856',s:'2918'},
       {id:'b9',p:'574930',s:'5749'},{id:'b10',p:'463817',s:'4638'},
     ].find(x=>x.id===selectedLoginBranch);
-    const mgPw = managerPw || (defaultB&&defaultB.p) || '';
-    const stPw = staffPw || (defaultB&&defaultB.s) || '';
-    if(pw === mgPw){
-      isManager = true;
-    } else if(pw === stPw){
-      isManager = false;
+    const mgPw = (b&&b.password)||(defaultB&&defaultB.p)||'';
+    const stPw = (b&&b.staffPassword)||(defaultB&&defaultB.s)||'';
+    if(pw===mgPw){
+      _doLoginSuccess({ branchId:selectedLoginBranch, isManager:true, isAdmin:false, userId:null, pages:null, branches:null });
+    } else if(pw===stPw){
+      _doLoginSuccess({ branchId:selectedLoginBranch, isManager:false, isAdmin:false, userId:null, pages:null, branches:null });
     } else {
-      showLoginError('รหัสผ่านไม่ถูกต้อง'); return;
+      showLoginError('รหัสผ่านไม่ถูกต้อง');
     }
-  }
+  });
+}
 
-  session = { branchId, isManager, isAdmin };
-  localStorage.setItem('laliza_session', JSON.stringify({ branchId, isManager, isAdmin, loginAt: Date.now() }));
+function _doLoginSuccess({ branchId, isManager, isAdmin, userId, pages, branches, userName }){
+  session = { branchId, isManager, isAdmin, userId: userId||null, pages: pages||null, branches: branches||null, userName: userName||null };
+  localStorage.setItem('laliza_session', JSON.stringify({ ...session, loginAt: Date.now() }));
   document.getElementById('loginError').style.display = 'none';
   showLoadingOverlay(true);
   db.ref('branches').once('value').then(snap=>{
@@ -2081,7 +2104,7 @@ function doLogin(){
       showLoadingOverlay(false);
       startApp();
     });
-  }).catch(e=>{
+  }).catch(()=>{
     showLoadingOverlay(false);
     startApp();
   });
@@ -2156,6 +2179,10 @@ function startApp(){
       session.isAdmin = s.isAdmin || false;
       session.isManager = s.isManager || false;
       session.branchId = s.branchId || session.branchId;
+      session.userId = s.userId || null;
+      session.pages = s.pages || null;
+      session.branches = s.branches || null;
+      session.userName = s.userName || null;
     }
   } catch(e){}
   document.getElementById('loginScreen').style.display = 'none';
@@ -4671,6 +4698,9 @@ function updateNavForBranch(){
   const isHR = isHRBranch();
   const isAdmin = session.isAdmin || false;
   const isMgr = session.isManager || false;
+  // ถ้า login ด้วย user ที่สร้างใหม่ → ใช้ pages permission
+  const P = session.pages || null;
+  const hasPerm = (key, fallback) => P ? !!(P[key]) : fallback;
 
   const show = (id, v) => { const el=document.getElementById(id); if(el) el.style.display=v?'':'none'; };
 
@@ -4687,11 +4717,22 @@ function updateNavForBranch(){
     show('bn-overview',true); show('bn-table',false); show('bn-tableAll',true);
     show('bn-dashboard',true); show('bn-mgrleave',true); show('bn-stats',true);
   } else {
-    show('nav-overview',true); show('nav-table',true); show('nav-tableAll',false);
-    show('nav-dashboard',true); show('nav-mgrleave',isMgr||isAdmin); show('nav-stats',true); show('nav-docs',true);
-    show('nav-holiday',isAdmin); show('nav-log',isMgr||isAdmin); show('nav-admin',isAdmin);
-    show('bn-overview',true); show('bn-table',true); show('bn-tableAll',false);
-    show('bn-dashboard',true); show('bn-mgrleave',isMgr||isAdmin); show('bn-stats',true);
+    show('nav-overview', hasPerm('overview', true));
+    show('nav-table',    hasPerm('table', true));
+    show('nav-tableAll', hasPerm('tableAll', false));
+    show('nav-dashboard',hasPerm('dashboard', true));
+    show('nav-mgrleave', hasPerm('mgrleave', isMgr||isAdmin));
+    show('nav-stats',    hasPerm('stats', true));
+    show('nav-docs',     hasPerm('docs', true));
+    show('nav-holiday',  hasPerm('holiday', isAdmin));
+    show('nav-log',      hasPerm('log', isMgr||isAdmin));
+    show('nav-admin',    hasPerm('admin', isAdmin));
+    show('bn-overview',  hasPerm('overview', true));
+    show('bn-table',     hasPerm('table', true));
+    show('bn-tableAll',  hasPerm('tableAll', false));
+    show('bn-dashboard', hasPerm('dashboard', true));
+    show('bn-mgrleave',  hasPerm('mgrleave', isMgr||isAdmin));
+    show('bn-stats',     hasPerm('stats', true));
   }
 
   // bottom nav แสดงเฉพาะมือถือ
@@ -4705,7 +4746,10 @@ function updateNavForBranch(){
 
   // export button
   const expBtn = document.getElementById('exportBtn');
-  if(expBtn) expBtn.style.display = (isMgr||isAdmin) ? '' : 'none';
+  if(expBtn) expBtn.style.display = hasPerm('export', isMgr||isAdmin) ? '' : 'none';
+  // edit permission
+  const _locked = !hasPerm('edit', isMgr||isAdmin);
+  ['addEmpBtn'].forEach(id=>{ const el=document.getElementById(id); if(el) el.style.display=hasPerm('edit',isMgr||isAdmin)?'':'none'; });
 }
 
 // ══ INIT ══
