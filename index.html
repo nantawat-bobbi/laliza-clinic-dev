@@ -897,6 +897,19 @@ td.dc { padding: 4px 2px !important; }
 .log-time{font-size:10px;color:var(--muted);font-family:'IBM Plex Mono',monospace;flex-shrink:0;margin-top:3px;}
 .log-branch{font-size:10px;color:var(--accent);font-family:'IBM Plex Mono',monospace;margin-top:2px;}
 
+/* ── USER MANAGEMENT ── */
+.user-card{background:var(--s1);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:10px;display:flex;align-items:center;gap:12px;}
+.user-card-info{flex:1;}
+.user-card-name{font-size:14px;font-weight:700;color:var(--text);}
+.user-card-meta{font-size:11px;color:var(--muted);margin-top:2px;}
+.user-role-badge{padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;}
+.user-role-badge.admin{background:#fef3c7;color:#92400e;}
+.user-role-badge.manager{background:#dbeafe;color:#1e40af;}
+.user-role-badge.staff{background:#f1f5f9;color:#475569;}
+.perm-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:10px;}
+.perm-item{display:flex;align-items:center;gap:6px;font-size:12px;}
+.perm-item input[type=checkbox]{width:14px;height:14px;cursor:pointer;accent-color:var(--accent);}
+
 /* ── ADMIN PANEL ── */
 .admin-hero{background:linear-gradient(135deg,#0f172a,#1e1b4b,#312e81);padding:24px;color:#fff;flex-shrink:0;border-bottom:1px solid rgba(255,255,255,0.1);}
 .admin-hero h2{font-size:20px;font-weight:800;}
@@ -1383,7 +1396,19 @@ td.dc { padding: 4px 2px !important; }
           </div>
         </div>
 
-        <!-- ส่วนที่ 3: รีเซ็ตข้อมูล -->
+        <!-- ส่วนที่ 3: User Management -->
+        <div class="admin-section">
+          <div class="admin-section-header">
+            <span style="font-size:20px">👤</span>
+            <h3>จัดการผู้ใช้งาน</h3>
+            <button onclick="openAddUser()" style="margin-left:auto;padding:6px 14px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-family:'Sarabun',sans-serif;font-size:12px;font-weight:700;cursor:pointer;">+ เพิ่มผู้ใช้</button>
+          </div>
+          <div class="admin-section-body" id="userList" style="padding:12px 16px;min-height:60px;">
+            <div style="color:var(--muted);font-size:13px;">กำลังโหลด...</div>
+          </div>
+        </div>
+
+        <!-- ส่วนที่ 4: รีเซ็ตข้อมูล -->
         <div class="admin-section">
           <div class="admin-section-header">
             <span style="font-size:20px">🔧</span>
@@ -1557,6 +1582,57 @@ td.dc { padding: 4px 2px !important; }
     <div class="export-footer">
       <button class="btn btn-ghost" style="flex:1" onclick="closeExportModal()">ยกเลิก</button>
       <button class="btn btn-primary" style="flex:2" onclick="doExport()">📥 Export เลย</button>
+    </div>
+  </div>
+</div>
+
+<!-- USER MODAL -->
+<div class="modal-overlay" id="userModal" onclick="if(event.target===this)closeUserModal()">
+  <div class="modal-box" style="max-width:520px;">
+    <div class="modal-header">
+      <h3 id="userModalTitle">เพิ่มผู้ใช้งาน</h3>
+      <button class="modal-close" onclick="closeUserModal()">✕</button>
+    </div>
+    <div class="modal-body" style="display:flex;flex-direction:column;gap:12px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div class="mf"><label>ชื่อ-สกุล *</label><input type="text" id="uName" placeholder="ชื่อ-นามสกุล"></div>
+        <div class="mf"><label>ชื่อเล่น *</label><input type="text" id="uNick" placeholder="ชื่อเล่น"></div>
+        <div class="mf"><label>ตำแหน่ง *</label><input type="text" id="uPos" placeholder="เช่น HR, ผู้จัดการ"></div>
+        <div class="mf"><label>เบอร์โทร</label><input type="tel" id="uPhone" placeholder="0XX-XXX-XXXX" oninput="formatPhone(this)"></div>
+      </div>
+      <div class="mf"><label>รหัสผ่าน * <span style="font-size:10px;color:var(--muted)">(4-10 ตัว)</span></label>
+        <input type="text" id="uPassword" placeholder="กำหนดรหัสผ่าน" maxlength="10">
+      </div>
+
+      <!-- สาขาที่เข้าได้ -->
+      <div class="mf">
+        <label>สาขาที่เข้าถึงได้</label>
+        <div id="uBranchPerm" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;"></div>
+      </div>
+
+      <!-- Page Permission -->
+      <div class="mf">
+        <label>หน้าที่เข้าถึงได้</label>
+        <div class="perm-grid" style="margin-top:6px;">
+          <label class="perm-item"><input type="checkbox" id="up_overview" checked> 🏠 หน้าแรก</label>
+          <label class="perm-item"><input type="checkbox" id="up_table" checked> 📅 ตารางวันหยุด</label>
+          <label class="perm-item"><input type="checkbox" id="up_dashboard" checked> 📊 Dashboard</label>
+          <label class="perm-item"><input type="checkbox" id="up_stats" checked> 📈 สถิติ</label>
+          <label class="perm-item"><input type="checkbox" id="up_tableAll"> 👔 ตารางทุกสาขา</label>
+          <label class="perm-item"><input type="checkbox" id="up_mgrleave"> 👔 ผจก.ทุกสาขา</label>
+          <label class="perm-item"><input type="checkbox" id="up_holiday"> 🎌 วันหยุดพิเศษ</label>
+          <label class="perm-item"><input type="checkbox" id="up_log"> 📋 ประวัติแก้ไข</label>
+          <label class="perm-item"><input type="checkbox" id="up_docs"> 📄 เอกสาร</label>
+          <label class="perm-item"><input type="checkbox" id="up_export"> 📥 Export</label>
+          <label class="perm-item"><input type="checkbox" id="up_edit"> ✏️ แก้ไขข้อมูล</label>
+          <label class="perm-item"><input type="checkbox" id="up_admin"> ⚙️ Admin Panel</label>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeUserModal()">ยกเลิก</button>
+      <button class="btn btn-primary" id="uSaveBtn" onclick="saveUser()">💾 บันทึก</button>
+      <button class="btn" id="uDeleteBtn" onclick="deleteUser()" style="background:#fee2e2;color:#b91c1c;border:1px solid #fecaca;display:none">🗑️ ลบ</button>
     </div>
   </div>
 </div>
@@ -2739,6 +2815,7 @@ function saveAdminSettings(){
 function renderAdminPanel(){
   renderHolidayTagsList();
   renderQuotaTable();
+  loadUsers(renderUserList);
 }
 
 function renderHolidayTagsList(){
@@ -3284,6 +3361,143 @@ function showLeaveBalancePopup(bid, ei){
     </div>`;
   popup.addEventListener('click', e=>{ if(e.target===popup) popup.remove(); });
   document.body.appendChild(popup);
+}
+
+// ════════════════════════════════════════════
+// USER MANAGEMENT — Admin Only
+// ════════════════════════════════════════════
+
+const PAGE_PERMS = [
+  {id:'overview', label:'🏠 หน้าแรก'},
+  {id:'table', label:'📅 ตารางวันหยุด'},
+  {id:'dashboard', label:'📊 Dashboard'},
+  {id:'stats', label:'📈 สถิติ'},
+  {id:'tableAll', label:'👔 ตารางทุกสาขา'},
+  {id:'mgrleave', label:'👔 ผจก.ทุกสาขา'},
+  {id:'holiday', label:'🎌 วันหยุดพิเศษ'},
+  {id:'log', label:'📋 ประวัติแก้ไข'},
+  {id:'docs', label:'📄 เอกสาร'},
+  {id:'export', label:'📥 Export'},
+  {id:'edit', label:'✏️ แก้ไขข้อมูล'},
+  {id:'admin', label:'⚙️ Admin Panel'},
+];
+
+let USERS = {}; // { userId: {...} }
+let _editUserId = null;
+
+function loadUsers(cb){
+  db.ref('users').once('value').then(snap=>{
+    USERS = snap.val() || {};
+    if(cb) cb();
+  }).catch(()=>{ if(cb) cb(); });
+}
+
+function renderUserList(){
+  const el = document.getElementById('userList');
+  if(!el) return;
+  const keys = Object.keys(USERS);
+  if(!keys.length){
+    el.innerHTML = '<div style="color:var(--muted);font-size:13px;">ยังไม่มีผู้ใช้งาน กด "+ เพิ่มผู้ใช้" ค่ะ</div>';
+    return;
+  }
+  el.innerHTML = keys.map(uid=>{
+    const u = USERS[uid];
+    const roleLabel = u.role==='admin'?'Admin':u.role==='manager'?'Manager':'Staff';
+    const roleCls = u.role==='admin'?'admin':u.role==='manager'?'manager':'staff';
+    const branches = (u.branches||[]).map(bid=>{
+      const b = BRANCHES.find(x=>x.id===bid);
+      return b ? `<span style="background:${b.color||'#e2e8f0'}22;color:var(--text);border:1px solid ${b.color||'#e2e8f0'};border-radius:4px;padding:1px 5px;font-size:10px">${b.name||bid}</span>` : '';
+    }).join(' ');
+    return `<div class="user-card">
+      <div style="width:36px;height:36px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:14px;flex-shrink:0">${(u.nick||u.name||'?')[0]}</div>
+      <div class="user-card-info">
+        <div class="user-card-name">${u.name||''} <span style="font-weight:400;color:var(--muted)">(${u.nick||''})</span>
+          <span class="user-role-badge ${roleCls}" style="margin-left:6px">${roleLabel}</span>
+        </div>
+        <div class="user-card-meta">${u.pos||''} · ${u.phone||''} · รหัส: ${u.password||''}</div>
+        <div style="margin-top:4px;display:flex;flex-wrap:wrap;gap:4px">${branches}</div>
+      </div>
+      <button onclick="openEditUser('${uid}')" style="padding:6px 12px;background:var(--s2);border:1px solid var(--border);border-radius:8px;cursor:pointer;font-size:12px;font-family:'Sarabun',sans-serif">✏️ แก้ไข</button>
+    </div>`;
+  }).join('');
+}
+
+function openAddUser(){
+  _editUserId = null;
+  document.getElementById('userModalTitle').textContent = 'เพิ่มผู้ใช้งาน';
+  ['uName','uNick','uPos','uPhone','uPassword'].forEach(id=>document.getElementById(id).value='');
+  PAGE_PERMS.forEach(p=>{ const el=document.getElementById('up_'+p.id); if(el) el.checked = ['overview','table','dashboard','stats'].includes(p.id); });
+  renderBranchPerm([]);
+  document.getElementById('uDeleteBtn').style.display='none';
+  document.getElementById('userModal').classList.add('open');
+}
+
+function openEditUser(uid){
+  _editUserId = uid;
+  const u = USERS[uid];
+  document.getElementById('userModalTitle').textContent = 'แก้ไขผู้ใช้งาน';
+  document.getElementById('uName').value = u.name||'';
+  document.getElementById('uNick').value = u.nick||'';
+  document.getElementById('uPos').value = u.pos||'';
+  document.getElementById('uPhone').value = u.phone||'';
+  document.getElementById('uPassword').value = u.password||'';
+  PAGE_PERMS.forEach(p=>{ const el=document.getElementById('up_'+p.id); if(el) el.checked = !!(u.pages&&u.pages[p.id]); });
+  renderBranchPerm(u.branches||[]);
+  document.getElementById('uDeleteBtn').style.display='';
+  document.getElementById('userModal').classList.add('open');
+}
+
+function renderBranchPerm(selected){
+  const el = document.getElementById('uBranchPerm');
+  if(!el) return;
+  el.innerHTML = BRANCHES.map(b=>{
+    const checked = selected.includes(b.id) ? 'checked' : '';
+    return `<label style="display:flex;align-items:center;gap:4px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:12px;">
+      <input type="checkbox" value="${b.id}" ${checked} style="accent-color:var(--accent)"> ${b.name}
+    </label>`;
+  }).join('');
+}
+
+function closeUserModal(){
+  document.getElementById('userModal').classList.remove('open');
+}
+
+function saveUser(){
+  const name = document.getElementById('uName').value.trim();
+  const nick = document.getElementById('uNick').value.trim();
+  const pos = document.getElementById('uPos').value.trim();
+  const phone = document.getElementById('uPhone').value.trim();
+  const password = document.getElementById('uPassword').value.trim();
+  if(!name||!nick||!pos||!password){ alert('กรุณากรอกข้อมูลให้ครบ'); return; }
+  if(password.length < 4){ alert('รหัสผ่านต้องมีอย่างน้อย 4 ตัว'); return; }
+
+  const pages = {};
+  PAGE_PERMS.forEach(p=>{ pages[p.id] = !!(document.getElementById('up_'+p.id)?.checked); });
+
+  const branches = [...document.querySelectorAll('#uBranchPerm input[type=checkbox]:checked')].map(c=>c.value);
+
+  const userData = { name, nick, pos, phone, password, pages, branches, updatedAt: Date.now() };
+
+  const uid = _editUserId || 'u_' + Date.now();
+  db.ref('users/'+uid).set(userData).then(()=>{
+    USERS[uid] = userData;
+    closeUserModal();
+    renderUserList();
+    showSaveIndicator('✅ บันทึกผู้ใช้แล้ว');
+    writeLog('user', (_editUserId?'แก้ไข':'เพิ่ม') + 'ผู้ใช้ ' + name);
+  });
+}
+
+function deleteUser(){
+  const u = USERS[_editUserId];
+  if(!u || !confirm(`ต้องการลบผู้ใช้ "${u.name}" หรือไม่?`)) return;
+  db.ref('users/'+_editUserId).remove().then(()=>{
+    delete USERS[_editUserId];
+    closeUserModal();
+    renderUserList();
+    showSaveIndicator('🗑️ ลบผู้ใช้แล้ว');
+    writeLog('user', 'ลบผู้ใช้ ' + u.name);
+  });
 }
 
 function renderBottom5(){
@@ -4517,6 +4731,7 @@ if(_savedSession){
 loadFromFirebase(()=>{
   loadHolidaysFromFirebase(()=>{
     loadAdminSettings(()=>{
+      loadUsers(()=>{});
       startRealtimeSync();
       if(_autoLogin){
         cleanDuplicateEmps();
