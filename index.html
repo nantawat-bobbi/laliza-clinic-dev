@@ -3471,7 +3471,7 @@ function openEditUser(uid){
   PAGE_PERMS.forEach(p=>{ const el=document.getElementById('up_'+p.id); if(el) el.checked = !!(u.pages&&u.pages[p.id]); });
   renderBranchPerm(u.branches||[]);
   document.getElementById('uDeleteBtn').style.display='';
-  document.getElementById('userModal').classList.add('open');
+  document.getElementById('userModal').style.display='flex';
 }
 
 function renderBranchPerm(selected){
