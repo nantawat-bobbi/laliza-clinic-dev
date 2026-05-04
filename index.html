@@ -2977,7 +2977,7 @@ function exportPDF(){
     });
     const rowBg = emps.indexOf(emp)%2===0?'#fff':'#fafafa';
     tableRows += `<tr style="background:${rowBg}">
-      <td style="padding:3px 6px;font-size:8px;font-weight:600;border:1px solid #e5e7eb;white-space:nowrap;width:110px;overflow:hidden;text-overflow:ellipsis;text-align:center">${emp.name} ${emp.nick?'('+emp.nick+')':''}</td>
+      <td style="padding:3px 6px;font-size:8px;font-weight:600;border:1px solid #e5e7eb;white-space:nowrap;width:110px;overflow:hidden;text-overflow:ellipsis;text-align:left">${emp.name} ${emp.nick?'('+emp.nick+')':''}</td>
       <td style="padding:3px 4px;font-size:7.5px;color:#64748b;border:1px solid #e5e7eb;width:50px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${emp.pos||''}</td>
       ${cells}
     </tr>`;
