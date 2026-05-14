@@ -1317,7 +1317,8 @@ thead th { border-right: 1px solid #e2e8f0; }
       <div class="sidebar-actions" style="margin-top:8px;">
         <button class="sidebar-btn" id="changePwBtn" onclick="openChangePw()">🔑 รหัส</button>
         <button class="sidebar-btn" id="addEmpBtn" onclick="openAddEmp()">+ พนักงาน</button>
-        <button class="sidebar-btn" id="exportBtn" onclick="openExportModal()" style="background:linear-gradient(135deg,#059669,#10b981);color:#fff;border:none;display:none">📥 Export</button>
+        <button class="sidebar-btn" id="exportBtn" onclick="openExportModal()" style="background:linear-gradient(135deg,#059669,#10b981);color:#fff;border:none;display:none;transition:transform 0.15s" onmousedown="this.style.transform='scale(0.95)'" onmouseup="this.style.transform='scale(1)'">
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align:-2px;margin-right:4px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export</button>
         <button class="sidebar-btn danger" onclick="doLogout()">ออก</button>
       </div>
     </div>
