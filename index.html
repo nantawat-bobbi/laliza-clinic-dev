@@ -3724,9 +3724,18 @@ function loadPeriodLeaves(cb){
   const path = getLeavesPath(b.id, _activePeriod.key);
   db.ref(path).once('value').then(snap=>{
     const data = snap.val();
-    if(data) b.leaves = data;
-    else b.leaves = {};
-    if(cb) cb();
+    if(data){
+      b.leaves = data;
+      if(cb) cb();
+    } else {
+      // fallback: ลองโหลดจาก legacy path (leaves เดิม)
+      db.ref(`branches/${b.id}/leaves`).once('value').then(snap2=>{
+        const legacy = snap2.val();
+        if(legacy) b.leaves = legacy;
+        else b.leaves = {};
+        if(cb) cb();
+      }).catch(()=>{ b.leaves = {}; if(cb) cb(); });
+    }
   }).catch(()=>{ if(cb) cb(); });
 }
 
