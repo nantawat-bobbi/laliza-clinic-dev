@@ -3960,11 +3960,9 @@ function showTooltip(e, text){
   if(!text) return;
   if(!_ttEl) initTooltip();
   clearTimeout(_ttTimer);
-  _ttTimer = setTimeout(()=>{
-    _ttEl.textContent = text;
-    positionTooltip(e);
-    _ttEl.classList.add('visible');
-  }, 300);
+  _ttEl.textContent = text;
+  positionTooltip(e);
+  _ttEl.classList.add('visible');
 }
 
 function positionTooltip(e){
@@ -4232,9 +4230,9 @@ function hideLtsTooltip(){
 function render(){
   const b = BRANCHES.find(x=>x.id===session.branchId);
   if(!b) return;
-  // ตรวจสอบ period
+  // ตรวจสอบ period — rebuild DAYS ทุกครั้ง (ล้างของเก่า)
   if(!_activePeriod) setActivePeriod(0);
-  if(DAYS.length === 0) rebuildDays();
+  rebuildDays(); // เสมอ ไม่ check length
   document.getElementById('branchNameText').textContent = b.name;
 
   const tl = totalLeavesCount(b);
@@ -4292,8 +4290,21 @@ function render(){
   const barEl = document.getElementById('leaveSummaryBar');
   if(barEl){
     if(chips.length){
+      // จัดกลุ่มตามแผนก
+      const DEPT_ORDER2 = ['ผจก.','BC','BT','HK'];
+      const DEPT_LABEL2 = {'ผจก.':'👑 ผจก.','BC':'💼 BC','BT':'✂️ BT','HK':'🧹 HK','other':'👤 อื่นๆ'};
+      const deptMap2 = {};
+      chips.forEach(({dept, html})=>{
+        if(!deptMap2[dept]) deptMap2[dept]=[];
+        deptMap2[dept].push(html);
+      });
+      const deptKeys2 = [...DEPT_ORDER2,'other'].filter(k=>deptMap2[k]?.length);
       barEl.style.display='flex';
-      barEl.innerHTML=`<span class="lsb-label">📋 ลาเดือนนี้:</span>${chips.join('')}`;
+      barEl.innerHTML = `<span class="lsb-label">📋 ลาเดือนนี้</span>` +
+        deptKeys2.map(k=>`<div class="lsb-dept">
+          <div class="lsb-dept-label">${DEPT_LABEL2[k]}</div>
+          <div class="lsb-dept-body">${deptMap2[k].join('')}</div>
+        </div>`).join('');
     } else {
       barEl.style.display='none';
       barEl.innerHTML='';
@@ -4314,9 +4325,6 @@ function render(){
   const hk        = allEmps.filter(e=>e&&e.pos==='แม่บ้าน');
   const suspended = allEmps.filter(e=>e&&POS_SPECIAL.includes(e.pos));
   const other     = allEmps.filter(e=>e&&!POS_ALL.includes(e.pos));
-
-  const aprDays = DAYS.filter(d=>d.month===4);
-  const mayDays = DAYS.filter(d=>d.month===5);
 
   // ── Build table ──
   // colgroup — single source of truth, table-layout:fixed อ่านจาก col เท่านั้น
