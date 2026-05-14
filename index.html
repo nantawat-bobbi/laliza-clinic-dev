@@ -3772,16 +3772,18 @@ function loadPeriodLeaves(cb){
     if(data){
       b.leaves = data;
       if(cb) cb();
-    } else {
-      // fallback: ลองโหลดจาก legacy path (leaves เดิม)
+    } else if(_activePeriod.offset === 0){
+      // เฉพาะ period ปัจจุบัน → fallback legacy
       db.ref(`branches/${b.id}/leaves`).once('value').then(snap2=>{
-        const legacy = snap2.val();
-        if(legacy) b.leaves = legacy;
-        else b.leaves = {};
+        b.leaves = snap2.val() || [];
         if(cb) cb();
-      }).catch(()=>{ b.leaves = {}; if(cb) cb(); });
+      }).catch(()=>{ b.leaves = []; if(cb) cb(); });
+    } else {
+      // period อื่น → ว่างเปล่า ไม่ fallback
+      b.leaves = [];
+      if(cb) cb();
     }
-  }).catch(()=>{ if(cb) cb(); });
+  }).catch(()=>{ b.leaves = []; if(cb) cb(); });
 }
 
 // migrate ข้อมูล leaves เดิม → period key "2026-04"
