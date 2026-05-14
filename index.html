@@ -4257,10 +4257,23 @@ function render(){
       byCode[code].push(`${day.date} ${MON_S2[day.month]}`);
     });
     const dayStr = Object.entries(byCode).map(([code,days])=>`${code}: ${days.join(', ')}`).join(' | ');
+    // ย่อตำแหน่ง
+    const _posMap = {'ผู้จัดการ':'ผจก.','Branch Manager':'ผจก.','Manager':'ผจก.','แคชเชียร์':'Cash.','Cashier':'Cash.','หัวหน้า BT':'BT','หัวหน้าBT':'BT','แม่บ้าน':'HK'};
+    const posShort = _posMap[emp.pos||''] || emp.pos || '—';
+    // จัดกลุ่มวันที่ตามเดือน
+    const datesByMon = {};
+    leaveDays.forEach(({day})=>{
+      const k = MON_S2[day.month];
+      if(!datesByMon[k]) datesByMon[k]=[];
+      datesByMon[k].push(day.date);
+    });
+    const dateStr = Object.entries(datesByMon).map(([mon,ds])=>`${ds.join(', ')} ${mon}`).join(' · ');
     chips.push(`<div class="leave-chip">
-      <span class="chip-name">${emp.nick||emp.name}</span>
-      <span class="chip-pos">(${emp.pos||'—'})</span>
-      <span class="chip-days">${dayStr}</span>
+      <div class="chip-left">
+        <span class="chip-name">${emp.nick||emp.name}</span>
+        <span class="chip-pos">(${posShort})</span>
+      </div>
+      <span class="chip-days">${dateStr}</span>
     </div>`);
   });
   const barEl = document.getElementById('leaveSummaryBar');
@@ -4302,22 +4315,33 @@ function render(){
   </colgroup>`;
   let h = `<div class="table-wrapper"><div class="table-scroll"><table style="table-layout:fixed;width:100%;min-width:${_minW}px;border-collapse:collapse;">${colDefs}<thead>`;
 
-  // Header row 1 — ชื่อ / เบอร์ / เดือน
+  // Header row 1 — dynamic months จาก DAYS จริง
   const insightLegend = `past=วันที่ผ่านมา | today=วันนี้ | future=วันที่กำลังจะมา | หยุดถี่=เฉลี่ย>2ครั้ง/สัปดาห์`;
+  const MON_FULL=['','มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+  // หาเดือนที่มีใน DAYS (อาจมี 1 หรือ 2 เดือน)
+  const monthGroups = [];
+  DAYS.forEach(d=>{
+    const last = monthGroups[monthGroups.length-1];
+    if(!last || last.month !== d.month){
+      monthGroups.push({ month: d.month, count: 1 });
+    } else { last.count++; }
+  });
+
   h += `<tr>
     <th class="th-info" rowspan="2">ชื่อพนักงาน</th>
     <th class="th-info" rowspan="2">เบอร์ / หยุดล่าสุด <span style="font-size:9px;color:var(--muted);cursor:help" title="${insightLegend}">ℹ️</span></th>
-    <th class="th-month" colspan="${aprDays.length}">เมษายน</th>
-    <th class="th-month" colspan="${mayDays.length}">พฤษภาคม</th>
+    ${monthGroups.map(mg=>`<th class="th-month" colspan="${mg.count}">${MON_FULL[mg.month]}</th>`).join('')}
   </tr><tr>`;
 
   // Header row 2 — วันที่
   DAYS.forEach(day=>{
     const sunBorder = day.dow===0 ? 'border-left:2px solid rgba(220,38,38,0.25);' : '';
     const hday = isHoliday(day.date, day.month);
-    const hdotTitle = hday ? ` title="🎌 ${hday}"` : '';
+    const hdotTitle = hday ? ` data-tip="🎌 ${hday}"` : '';
     const todayCls = day.isToday ? 'today-col' : '';
-    h += `<th class="${todayCls}" style="${sunBorder}">
+    const weCls = day.we ? day.wkClass : '';
+    const hdayCls = hday ? 'holiday-col' : '';
+    h += `<th class="${[todayCls, weCls, hdayCls].filter(Boolean).join(' ')}" style="${sunBorder}">
       <div class="th-dayname ${day.we?'we':''}">${day.name}</div>
       <div class="th-daynum ${day.we?'we':''} ${hday?'holiday':''}">${day.date}</div>
       <div class="holiday-dot ${hday?'visible':''}"${hdotTitle}></div>
