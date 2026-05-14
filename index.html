@@ -1899,28 +1899,33 @@ const DAY_NAMES=['อา','จ','อ','พ','พฤ','ศ','ส'];
 let _activePeriod = null;
 
 function getPeriodByOffset(offset){
-  // หา base period: วันนี้ >= 26 → period เริ่มเดือนนี้, < 26 → period เริ่มเดือนก่อน
+  // base period = period ที่ครอบวันนี้
+  // วันที่ 1-25 → period เริ่มเดือนก่อน (เช่น 14 พ.ค. → period เม.ย. = start 26 เม.ย.)
+  // วันที่ 26-31 → period เริ่มเดือนนี้ (เช่น 27 พ.ค. → period พ.ค. = start 26 พ.ค.)
   const today = new Date();
   let baseYear = today.getFullYear();
   let baseMonth = today.getMonth(); // 0-indexed
   if(today.getDate() < 26){
-    // ยังอยู่ใน period ที่เริ่มเดือนก่อน
-    baseMonth = baseMonth - 1;
+    baseMonth--;
     if(baseMonth < 0){ baseMonth = 11; baseYear--; }
   }
-  // เลื่อนตาม offset
+  // เลื่อนตาม offset (ทีละ 1 เดือน)
   let startMonth = baseMonth + offset;
-  let startYear = baseYear;
+  let startYear  = baseYear;
   while(startMonth > 11){ startMonth -= 12; startYear++; }
   while(startMonth < 0) { startMonth += 12; startYear--; }
 
   const start = new Date(startYear, startMonth, 26);
-  const end   = new Date(startYear, startMonth+1, 25);
-  const key   = `${startYear}-${String(startMonth+1).padStart(2,'0')}`;
+  // end = 25 ของเดือนถัดไป
+  let endMonth = startMonth + 1;
+  let endYear  = startYear;
+  if(endMonth > 11){ endMonth = 0; endYear++; }
+  const end = new Date(endYear, endMonth, 25);
+
+  const key = `${startYear}-${String(startMonth+1).padStart(2,'0')}`;
   const MON_S =['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
   const MON_TH=['','มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
-  const endMon = end.getMonth(); // 0-indexed
-  const label = `${start.getDate()} ${MON_S[startMonth+1]} – ${end.getDate()} ${MON_S[endMon+1]} ${end.getFullYear()+543}`;
+  const label = `${start.getDate()} ${MON_S[startMonth+1]} – ${end.getDate()} ${MON_S[endMonth+1]} ${end.getFullYear()+543}`;
   const labelFull = `${MON_TH[startMonth+1]} ${startYear+543}`;
   const totalDays = Math.round((end-start)/(1000*60*60*24))+1;
   return { key, start, end, label, labelFull, offset, totalDays };
@@ -3741,15 +3746,20 @@ function changePeriod(dir){
     _periodOffset = 0;
   } else {
     const next = _periodOffset + dir;
-    if(next < -1) return; // ย้อนหลังได้แค่ 1 เดือน
-    if(next > 6) return;  // ล่วงหน้าได้แค่ 6 เดือน
+    if(next < -1) return;
+    if(next > 6) return;
     _periodOffset = next;
   }
+  // Reset DAYS และ leaves ก่อนเปลี่ยนเดือน
+  DAYS.length = 0;
+  const b = BRANCHES.find(x=>x.id===session.branchId);
+  if(b) b.leaves = []; // reset เป็น array ว่าง
+
   setActivePeriod(_periodOffset);
-  // ปรับ UI ปุ่ม
-  document.getElementById('btnNextPeriod').style.opacity = _periodOffset>=6?'0.3':'1';
-  document.getElementById('btnTodayPeriod').style.display = _periodOffset===0?'none':'';
-  // โหลด leaves ของ period ใหม่
+  const btnNext = document.getElementById('btnNextPeriod');
+  const btnToday = document.getElementById('btnTodayPeriod');
+  if(btnNext) btnNext.style.opacity = _periodOffset>=6?'0.3':'1';
+  if(btnToday) btnToday.style.display = _periodOffset===0?'none':'';
   loadPeriodLeaves(()=>{ render(); renderOverview(); });
 }
 
