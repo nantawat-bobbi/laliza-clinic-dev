@@ -1414,6 +1414,7 @@ thead th { border-right: 1px solid #e2e8f0; }
     <!-- TABLE -->
     <div id="pageTable" class="page-content" style="display:none;overflow-y:auto;-webkit-overflow-scrolling:touch;">
       <div class="stats-row" id="statsRow"></div>
+      <div class="leave-summary-bar" id="leaveSummaryBar" style="display:none"></div>
       <div class="content" id="mainContent"></div>
     </div>
 
@@ -4148,6 +4149,44 @@ function render(){
     <div class="stat-card"><div class="slabel">วันหยุด</div><div class="sval">5</div><div class="ssub">วัน</div></div>
     <div class="stat-card" style="border-color:var(--accent)"><div class="slabel">สถานะ</div><div class="sval" style="font-size:13px;margin-top:6px">${canEdit?'🔓 แก้ไขได้':'🔒 ดูอย่างเดียว'}</div></div>
   `;
+
+  // ══ Leave Summary Bar ══
+  const MON_S2=['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+  const allEmpsForBar = toArray(b.emps||[]);
+  const bLeavesForBar = b.leaves||{};
+  const chips = [];
+  allEmpsForBar.forEach((emp,ei)=>{
+    if(!emp||!emp.name) return;
+    const empLeaves = bLeavesForBar[ei]||bLeavesForBar[String(ei)]||{};
+    const leaveDays = [];
+    DAYS.forEach((day,di)=>{
+      const ld = getLeaveData(bLeavesForBar, ei, di);
+      if(ld && ld.code !== 'X') leaveDays.push({ day, code: ld.code });
+    });
+    if(!leaveDays.length) return;
+    // จัดกลุ่มวันที่ตาม code
+    const byCode = {};
+    leaveDays.forEach(({day,code})=>{
+      if(!byCode[code]) byCode[code]=[];
+      byCode[code].push(`${day.date} ${MON_S2[day.month]}`);
+    });
+    const dayStr = Object.entries(byCode).map(([code,days])=>`${code}: ${days.join(', ')}`).join(' | ');
+    chips.push(`<div class="leave-chip">
+      <span class="chip-name">${emp.nick||emp.name}</span>
+      <span class="chip-pos">(${emp.pos||'—'})</span>
+      <span class="chip-days">${dayStr}</span>
+    </div>`);
+  });
+  const barEl = document.getElementById('leaveSummaryBar');
+  if(barEl){
+    if(chips.length){
+      barEl.style.display='flex';
+      barEl.innerHTML=`<span class="lsb-label">📋 ลาเดือนนี้:</span>${chips.join('')}`;
+    } else {
+      barEl.style.display='none';
+      barEl.innerHTML='';
+    }
+  }
 
   const allEmps = toArray(b.emps||[]);
   const bLeaves = b.leaves||{};
