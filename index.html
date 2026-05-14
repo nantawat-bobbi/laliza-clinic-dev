@@ -1898,17 +1898,29 @@ const DAY_NAMES=['อา','จ','อ','พ','พฤ','ศ','ส'];
 let _activePeriod = null;
 
 function getPeriodByOffset(offset){
+  // หา base period: วันนี้ >= 26 → period เริ่มเดือนนี้, < 26 → period เริ่มเดือนก่อน
   const today = new Date();
-  const base = today.getDate() >= 26
-    ? new Date(today.getFullYear(), today.getMonth(), 26)
-    : new Date(today.getFullYear(), today.getMonth()-1, 26);
-  const start = new Date(base.getFullYear(), base.getMonth()+offset, 26);
-  const end   = new Date(start.getFullYear(), start.getMonth()+1, 25);
-  const key   = `${start.getFullYear()}-${String(start.getMonth()+1).padStart(2,'0')}`;
+  let baseYear = today.getFullYear();
+  let baseMonth = today.getMonth(); // 0-indexed
+  if(today.getDate() < 26){
+    // ยังอยู่ใน period ที่เริ่มเดือนก่อน
+    baseMonth = baseMonth - 1;
+    if(baseMonth < 0){ baseMonth = 11; baseYear--; }
+  }
+  // เลื่อนตาม offset
+  let startMonth = baseMonth + offset;
+  let startYear = baseYear;
+  while(startMonth > 11){ startMonth -= 12; startYear++; }
+  while(startMonth < 0) { startMonth += 12; startYear--; }
+
+  const start = new Date(startYear, startMonth, 26);
+  const end   = new Date(startYear, startMonth+1, 25);
+  const key   = `${startYear}-${String(startMonth+1).padStart(2,'0')}`;
   const MON_S =['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
   const MON_TH=['','มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
-  const label = `${start.getDate()} ${MON_S[start.getMonth()+1]} – ${end.getDate()} ${MON_S[end.getMonth()+1]} ${end.getFullYear()+543}`;
-  const labelFull = `${MON_TH[start.getMonth()+1]} ${start.getFullYear()+543}`;
+  const endMon = end.getMonth(); // 0-indexed
+  const label = `${start.getDate()} ${MON_S[startMonth+1]} – ${end.getDate()} ${MON_S[endMon+1]} ${end.getFullYear()+543}`;
+  const labelFull = `${MON_TH[startMonth+1]} ${startYear+543}`;
   const totalDays = Math.round((end-start)/(1000*60*60*24))+1;
   return { key, start, end, label, labelFull, offset, totalDays };
 }
