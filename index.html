@@ -4069,14 +4069,21 @@ function hideLtsTooltip(){
 function render(){
   const b = BRANCHES.find(x=>x.id===session.branchId);
   if(!b) return;
+  // ตรวจสอบ period
+  if(!_activePeriod) setActivePeriod(0);
+  if(DAYS.length === 0) rebuildDays();
   document.getElementById('branchNameText').textContent = b.name;
 
   const tl = totalLeavesCount(b);
-  document.getElementById('statsRow').innerHTML=`
-    <div class="stat-card"><div class="slabel">พนักงาน</div><div class="sval">${toArray(b.emps||[]).length}</div><div class="ssub">คน</div></div>
-    <div class="stat-card"><div class="slabel">ลาเดือนนี้</div><div class="sval" style="color:var(--red)">${tl}</div><div class="ssub">ครั้ง</div></div>
-    <div class="stat-card"><div class="slabel">วันหยุด/เดือน</div><div class="sval">5</div><div class="ssub">วัน</div></div>
-    <div class="stat-card" style="border-color:var(--accent)"><div class="slabel">สถานะ</div><div class="sval" style="font-size:13px;margin-top:6px">${(session.isManager||session.isAdmin)?'🔓 แก้ไขได้':'🔒 ดูอย่างเดียว'}</div></div>
+  const empCount = toArray(b.emps||[]).length;
+  const periodLabel = _activePeriod ? _activePeriod.labelFull : '—';
+  const canEdit = session.isManager||session.isAdmin;
+  const el = document.getElementById('statsRow');
+  if(el) el.innerHTML=`
+    <div class="stat-card"><div class="slabel">พนักงาน</div><div class="sval">${empCount}</div><div class="ssub">คน</div></div>
+    <div class="stat-card"><div class="slabel">ลา ${periodLabel}</div><div class="sval" style="color:var(--red)">${tl}</div><div class="ssub">ครั้ง</div></div>
+    <div class="stat-card"><div class="slabel">วันหยุด</div><div class="sval">5</div><div class="ssub">วัน</div></div>
+    <div class="stat-card" style="border-color:var(--accent)"><div class="slabel">สถานะ</div><div class="sval" style="font-size:13px;margin-top:6px">${canEdit?'🔓 แก้ไขได้':'🔒 ดูอย่างเดียว'}</div></div>
   `;
 
   const allEmps = toArray(b.emps||[]);
