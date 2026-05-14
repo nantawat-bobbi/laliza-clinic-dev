@@ -1031,6 +1031,26 @@ thead th { border-right: 1px solid #e2e8f0; }
   font-size: 13px;
 }
 
+/* ── CUSTOM TOOLTIP ── */
+.cal-tooltip {
+  position: fixed;
+  background: rgba(15,23,42,0.95);
+  color: #fff;
+  padding: 7px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-family: 'Sarabun', sans-serif;
+  max-width: 220px;
+  line-height: 1.6;
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0;
+  transition: opacity 0.15s;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+  white-space: pre-line;
+}
+.cal-tooltip.visible { opacity: 1; }
+
 /* SCROLLBAR */
 ::-webkit-scrollbar{width:5px;height:5px;}
 ::-webkit-scrollbar-track{background:var(--s2);}
@@ -2372,7 +2392,8 @@ function startApp(){
   if(_roBanner) _roBanner.style.display = session.isManager ? 'none' : 'flex';
 
   updateNavForBranch();
-  // init notifications
+  // init tooltip + notifications
+  initTooltip();
   setTimeout(initNotifications, 1000);
   if(isHRBranch()){
     switchTab('stats', null);
@@ -3893,6 +3914,59 @@ function createOverQuotaNotif(emp, code, branchName, branchId){
     read: false,
     approved: false,
     createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+  });
+}
+
+// ════════════════════════════════════════════
+// CUSTOM TOOLTIP — 0.3s delay, instant hide
+// ════════════════════════════════════════════
+let _ttEl = null;
+let _ttTimer = null;
+
+function initTooltip(){
+  if(document.getElementById('calTooltip')) return;
+  _ttEl = document.createElement('div');
+  _ttEl.id = 'calTooltip';
+  _ttEl.className = 'cal-tooltip';
+  document.body.appendChild(_ttEl);
+}
+
+function showTooltip(e, text){
+  if(!text) return;
+  if(!_ttEl) initTooltip();
+  clearTimeout(_ttTimer);
+  _ttTimer = setTimeout(()=>{
+    _ttEl.textContent = text;
+    positionTooltip(e);
+    _ttEl.classList.add('visible');
+  }, 300);
+}
+
+function positionTooltip(e){
+  if(!_ttEl) return;
+  const x = e.clientX + 14;
+  const y = e.clientY + 14;
+  const w = _ttEl.offsetWidth || 180;
+  const h = _ttEl.offsetHeight || 60;
+  _ttEl.style.left = (x + w > window.innerWidth ? x - w - 20 : x) + 'px';
+  _ttEl.style.top  = (y + h > window.innerHeight ? y - h - 20 : y) + 'px';
+}
+
+function hideTooltip(){
+  clearTimeout(_ttTimer);
+  if(_ttEl) _ttEl.classList.remove('visible');
+}
+
+// ใส่ tooltip ให้ทุก td.dc
+function attachTooltips(){
+  document.querySelectorAll('td.dc[title]').forEach(td=>{
+    const tip = td.getAttribute('title');
+    if(!tip) return;
+    td.removeAttribute('title');
+    td.setAttribute('data-tip', tip);
+    td.addEventListener('mouseenter', e=>showTooltip(e, td.dataset.tip));
+    td.addEventListener('mousemove',  e=>positionTooltip(e));
+    td.addEventListener('mouseleave', hideTooltip);
   });
 }
 
