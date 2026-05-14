@@ -1870,6 +1870,60 @@ const DAY_NAMES=['อา','จ','อ','พ','พฤ','ศ','ส'];
 // No index comparison, no day-number assumption
 // ════════════════════════════════════════════
 
+// ════════════════════════════════════════════
+// PERIOD ENGINE — 26th to 25th of next month
+// ════════════════════════════════════════════
+
+let _activePeriod = null;
+
+function getPeriodByOffset(offset){
+  const today = new Date();
+  const base = today.getDate() >= 26
+    ? new Date(today.getFullYear(), today.getMonth(), 26)
+    : new Date(today.getFullYear(), today.getMonth()-1, 26);
+  const start = new Date(base.getFullYear(), base.getMonth()+offset, 26);
+  const end   = new Date(start.getFullYear(), start.getMonth()+1, 25);
+  const key   = `${start.getFullYear()}-${String(start.getMonth()+1).padStart(2,'0')}`;
+  const MON_S =['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+  const MON_TH=['','มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+  const label = `${start.getDate()} ${MON_S[start.getMonth()+1]} – ${end.getDate()} ${MON_S[end.getMonth()+1]} ${end.getFullYear()+543}`;
+  const labelFull = `${MON_TH[start.getMonth()+1]} ${start.getFullYear()+543}`;
+  const totalDays = Math.round((end-start)/(1000*60*60*24))+1;
+  return { key, start, end, label, labelFull, offset, totalDays };
+}
+
+function setActivePeriod(offset){
+  _activePeriod = getPeriodByOffset(offset||0);
+  rebuildDays();
+  const el = document.getElementById('topSub');
+  if(el) el.textContent = `${_activePeriod.label} · วันหยุด 5 วัน`;
+  const pp = document.getElementById('periodPicker');
+  if(pp) pp.textContent = _activePeriod.labelFull;
+}
+
+function rebuildDays(){
+  if(!_activePeriod) return;
+  DAYS.length = 0;
+  const d = new Date(_activePeriod.start);
+  for(let i=0; i<_activePeriod.totalDays; i++){
+    const dd = new Date(d); dd.setHours(0,0,0,0);
+    const status = getDateStatus(dd);
+    DAYS.push({
+      dateObj:dd, date:dd.getDate(), month:dd.getMonth()+1,
+      year:dd.getFullYear(), ts:dd.getTime(),
+      dow:dd.getDay(), name:DAY_NAMES[dd.getDay()],
+      we:dd.getDay()===0||dd.getDay()===6,
+      wkClass:getWeekendClass(dd), status,
+      isPast:status==='past', isToday:status==='today', isFuture:status==='future',
+    });
+    d.setDate(d.getDate()+1);
+  }
+}
+
+function getLeavesPath(branchId, periodKey){
+  return `branches/${branchId}/leaves_v2/${periodKey}`;
+}
+
 // A. getDateStatus — used everywhere, single impl
 function getDateStatus(date){
   const today = new Date(); today.setHours(0,0,0,0);
