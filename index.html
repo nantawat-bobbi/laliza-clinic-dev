@@ -1229,6 +1229,9 @@ td[class*="holiday-col"], th[class*="holiday-col"] { background-color: #ffd4d4 !
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <!-- Firestore SDK (same version as Realtime DB) -->
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <!-- Google API -->
+  <script src="https://apis.google.com/js/api.js"></script>
+  <script src="https://accounts.google.com/gsi/client"></script>
 </head>
 <body>
 
@@ -1309,6 +1312,12 @@ td[class*="holiday-col"], th[class*="holiday-col"] { background-color: #ffd4d4 !
       </div>
       <div class="nav-item" id="nav-registry" onclick="switchTab('registry',event)">
         <span class="nav-icon">👤</span> ทะเบียนพนักงาน
+      </div>
+      <div class="nav-item" id="nav-doctors" onclick="switchTab('doctors',event)" style="display:none">
+        <span class="nav-icon">👨‍⚕️</span> ทะเบียนแพทย์
+      </div>
+      <div class="nav-item" id="nav-roster" onclick="switchTab('roster',event)" style="display:none">
+        <span class="nav-icon">📅</span> ตารางลงตรวจ
       </div>
       <div class="nav-item" id="nav-docs" onclick="switchTab('docs',event)">
         <span class="nav-icon">📄</span> เอกสาร
@@ -1463,6 +1472,29 @@ td[class*="holiday-col"], th[class*="holiday-col"] { background-color: #ffd4d4 !
         </div>
       </div>
       <div id="registryContent" style="padding:16px;"></div>
+    </div>
+
+    <!-- DOCTOR REGISTRY -->
+    <div id="pageDoctors" class="page-content" style="display:none;overflow-y:auto;-webkit-overflow-scrolling:touch;">
+      <div style="background:linear-gradient(135deg,#059669,#10b981);padding:20px 24px;color:#fff;">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+          <div>
+            <h2 style="font-size:18px;font-weight:800;margin:0;">👨‍⚕️ ทะเบียนแพทย์</h2>
+            <p style="font-size:11px;opacity:0.7;margin:4px 0 0;">ข้อมูลแพทย์ เอกสาร และค่าตอบแทน</p>
+          </div>
+          <button id="addDoctorBtn" onclick="openAddDoctor()" style="display:none;padding:8px 16px;background:#fff;color:#059669;border:none;border-radius:20px;font-family:'Sarabun',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">+ เพิ่มแพทย์</button>
+        </div>
+      </div>
+      <div id="doctorsContent" style="padding:16px;"></div>
+    </div>
+
+    <!-- DOCTOR ROSTER -->
+    <div id="pageRoster" class="page-content" style="display:none;overflow-y:auto;-webkit-overflow-scrolling:touch;">
+      <div style="background:linear-gradient(135deg,#7c3aed,#8b5cf6);padding:20px 24px;color:#fff;">
+        <h2 style="font-size:18px;font-weight:800;margin:0;">📅 ตารางลงตรวจแพทย์</h2>
+        <p style="font-size:11px;opacity:0.7;margin:4px 0 0;">รอบ 26–25 ของทุกเดือน</p>
+      </div>
+      <div id="rosterContent" style="padding:16px;"></div>
     </div>
 
     <!-- TABLE ALL BRANCHES -->
@@ -2437,9 +2469,20 @@ function startApp(){
   if(_roBanner) _roBanner.style.display = session.isManager ? 'none' : 'flex';
 
   updateNavForBranch();
-  // init tooltip + notifications
+  // init tooltip + notifications + google drive
   initTooltip();
   setTimeout(initNotifications, 1000);
+  // init Google Drive (ถ้า gsi loaded)
+  if(typeof google !== 'undefined' && google.accounts){
+    initGoogleDrive();
+  } else {
+    window.addEventListener('load', ()=>{ try{ initGoogleDrive(); }catch(e){} });
+  }
+  // show doctor nav ถ้าเป็น HR หรือ Admin
+  const _isDoctorAdmin = session.isAdmin || session.branchId==='b10';
+  show('nav-doctors', _isDoctorAdmin);
+  show('nav-roster', true);
+  loadDoctors(()=>{});
   if(isHRBranch()){
     switchTab('stats', null);
   } else if(isGlobalBranch()){
@@ -2475,7 +2518,7 @@ function getCurrentBranch(){
 let currentTab = 'overview';
 function switchTab(tab, e){
   currentTab = tab;
-  const pages = { overview:'pageOverview', table:'pageTable', tableAll:'pageTableAll', dashboard:'pageDashboard', stats:'pageStats', docs:'pageDocs', mgrleave:'pageMgrleave', holiday:'pageHoliday', log:'pageLog', admin:'pageAdmin', registry:'pageRegistry' };
+  const pages = { overview:'pageOverview', table:'pageTable', tableAll:'pageTableAll', dashboard:'pageDashboard', stats:'pageStats', docs:'pageDocs', mgrleave:'pageMgrleave', holiday:'pageHoliday', log:'pageLog', admin:'pageAdmin', registry:'pageRegistry', doctors:'pageDoctors', roster:'pageRoster' };
   document.querySelectorAll('.page-content').forEach(p=>p.style.display='none');
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   document.querySelectorAll('.bottom-nav-item').forEach(n=>n.classList.remove('active'));
@@ -2489,6 +2532,8 @@ function switchTab(tab, e){
   if(tab==='tableAll') renderTableAll();
   if(tab==='dashboard') renderDashboard();
   if(tab==='registry') renderRegistry();
+  if(tab==='doctors') renderDoctors();
+  if(tab==='roster') renderRoster();
   if(tab==='stats') renderStats();
   if(tab==='docs') renderDocs();
   if(tab==='mgrleave') renderMgrLeave();
@@ -4149,6 +4194,95 @@ function attachTooltips(){
 }
 
 // ════════════════════════════════════════════
+// GOOGLE DRIVE INTEGRATION
+// ════════════════════════════════════════════
+
+const GDRIVE_CLIENT_ID = '475403782523-bj494tvmm6iucm12h1c2m9dc8sihpu2i.apps.googleusercontent.com';
+const GDRIVE_FOLDER_ID = '1_oixoQbxrOuNCed5GscNRJRv8aK4fF-G';
+const GDRIVE_SCOPES = 'https://www.googleapis.com/auth/drive.file';
+
+let _gdriveToken = null;
+let _gdriveReady = false;
+
+function initGoogleDrive(){
+  google.accounts.id.initialize({
+    client_id: GDRIVE_CLIENT_ID,
+    callback: ()=>{}
+  });
+  _gdriveReady = true;
+}
+
+function requestDriveAccess(cb){
+  const client = google.accounts.oauth2.initTokenClient({
+    client_id: GDRIVE_CLIENT_ID,
+    scope: GDRIVE_SCOPES,
+    callback: (resp)=>{
+      if(resp.access_token){
+        _gdriveToken = resp.access_token;
+        if(cb) cb(true);
+      } else {
+        if(cb) cb(false);
+      }
+    }
+  });
+  client.requestAccessToken();
+}
+
+// สร้าง folder สำหรับแพทย์แต่ละคน
+async function getOrCreateDoctorFolder(doctorName){
+  if(!_gdriveToken) return null;
+  // ค้นหา folder ที่มีอยู่แล้ว
+  const searchRes = await fetch(
+    `https://www.googleapis.com/drive/v3/files?q=name='${doctorName}' and '${GDRIVE_FOLDER_ID}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`,
+    { headers: { Authorization: 'Bearer '+_gdriveToken } }
+  );
+  const searchData = await searchRes.json();
+  if(searchData.files?.length) return searchData.files[0].id;
+
+  // สร้าง folder ใหม่
+  const createRes = await fetch('https://www.googleapis.com/drive/v3/files', {
+    method: 'POST',
+    headers: { Authorization: 'Bearer '+_gdriveToken, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      name: doctorName,
+      mimeType: 'application/vnd.google-apps.folder',
+      parents: [GDRIVE_FOLDER_ID]
+    })
+  });
+  const folderData = await createRes.json();
+  return folderData.id;
+}
+
+// อัพโหลดไฟล์ไปยัง folder ของแพทย์
+async function uploadDoctorFile(doctorId, doctorName, file, fileType){
+  if(!_gdriveToken){
+    return new Promise(resolve=>{
+      requestDriveAccess(async ok=>{
+        if(!ok){ resolve(null); return; }
+        resolve(await uploadDoctorFile(doctorId, doctorName, file, fileType));
+      });
+    });
+  }
+
+  const folderName = `${doctorName}_${doctorId}`;
+  const folderId = await getOrCreateDoctorFolder(folderName);
+  if(!folderId) return null;
+
+  const meta = { name: `${fileType}_${file.name}`, parents: [folderId] };
+  const form = new FormData();
+  form.append('metadata', new Blob([JSON.stringify(meta)], {type:'application/json'}));
+  form.append('file', file);
+
+  const res = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,webViewLink', {
+    method: 'POST',
+    headers: { Authorization: 'Bearer '+_gdriveToken },
+    body: form
+  });
+  const data = await res.json();
+  return data.webViewLink ? { id: data.id, name: data.name, url: data.webViewLink } : null;
+}
+
+// ════════════════════════════════════════════
 // EMPLOYEE REGISTRY
 // ════════════════════════════════════════════
 
@@ -4449,6 +4583,216 @@ function cloneEmpsToRegistry(btn){
       showSaveIndicator('❌ เกิดข้อผิดพลาดค่ะ', 'error');
     });
   });
+}
+
+// ════════════════════════════════════════════
+// DOCTOR PORTAL
+// ════════════════════════════════════════════
+
+let DOCTORS = {}; // { doctorId: {...} }
+let _doctorSession = null; // ถ้า login เป็นหมอ
+
+// Login type toggle
+function setLoginType(type){
+  const isDoctor = type === 'doctor';
+  document.getElementById('loginForm').style.display = isDoctor ? 'none' : '';
+  document.getElementById('doctorLoginForm').style.display = isDoctor ? '' : 'none';
+  document.getElementById('loginTypeStaff').style.background = isDoctor ? '#fff' : 'var(--accent)';
+  document.getElementById('loginTypeStaff').style.color = isDoctor ? 'var(--muted)' : '#fff';
+  document.getElementById('loginTypeStaff').style.borderColor = isDoctor ? 'var(--border)' : 'var(--accent)';
+  document.getElementById('loginTypeDoctor').style.background = isDoctor ? '#059669' : '#fff';
+  document.getElementById('loginTypeDoctor').style.color = isDoctor ? '#fff' : 'var(--muted)';
+  document.getElementById('loginTypeDoctor').style.borderColor = isDoctor ? '#059669' : 'var(--border)';
+}
+
+function doLoginDoctor(){
+  const username = document.getElementById('doctorUsername').value.trim();
+  const password = document.getElementById('doctorPassword').value.trim();
+  if(!username||!password){ alert('กรุณากรอก Username และ Password ค่ะ'); return; }
+
+  db.ref('doctors').orderByChild('username').equalTo(username).once('value').then(snap=>{
+    const data = snap.val();
+    if(!data){ alert('ไม่พบ Username นี้ค่ะ'); return; }
+    const [docId, doc] = Object.entries(data)[0];
+    if(doc.password !== password){ alert('รหัสผ่านไม่ถูกต้องค่ะ'); return; }
+    // login สำเร็จ
+    _doctorSession = { docId, ...doc };
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('appShell').style.display = 'flex';
+    showDoctorPortal();
+  });
+}
+
+function showDoctorPortal(){
+  // ซ่อน nav ปกติ แสดงเฉพาะของแพทย์
+  document.querySelectorAll('.nav-item').forEach(el=>el.style.display='none');
+  // แสดง roster ของตัวเอง
+  switchTab('roster');
+}
+
+function loadDoctors(cb){
+  db.ref('doctors').once('value').then(snap=>{
+    DOCTORS = snap.val() || {};
+    if(cb) cb();
+  });
+}
+
+function renderDoctors(){
+  const el = document.getElementById('doctorsContent');
+  if(!el) return;
+  if(!Object.keys(DOCTORS).length){
+    loadDoctors(renderDoctors);
+    el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted);">ยังไม่มีข้อมูลแพทย์ค่ะ</div>';
+    return;
+  }
+  const isAdmin = session.isAdmin || session.branchId==='b10';
+  const MON_S=['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+
+  let html = '<div style="display:flex;flex-direction:column;gap:10px;">';
+  Object.entries(DOCTORS).forEach(([id, doc])=>{
+    const expDate = doc.licenseExpiry ? new Date(doc.licenseExpiry) : null;
+    const daysLeft = expDate ? Math.floor((expDate-new Date())/(1000*60*60*24)) : null;
+    const expColor = daysLeft===null?'var(--muted)':daysLeft<30?'#dc2626':daysLeft<90?'#f59e0b':'#059669';
+    const expStr = expDate ? `${expDate.getDate()} ${MON_S[expDate.getMonth()+1]} ${expDate.getFullYear()+543}` : 'ไม่ระบุ';
+
+    html += `<div style="background:#fff;border:1px solid var(--border);border-radius:14px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.05);">
+      <div style="padding:14px 16px;display:flex;align-items:center;gap:12px;">
+        <div style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#059669,#10b981);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:18px;flex-shrink:0;">${(doc.name||'?')[2]||'D'}</div>
+        <div style="flex:1;">
+          <div style="font-size:14px;font-weight:800;">${doc.name||'—'}</div>
+          <div style="font-size:11px;color:var(--muted);">เลข ว. ${doc.licenseNo||'—'} · หมดอายุ <span style="color:${expColor};font-weight:700">${expStr}</span></div>
+        </div>
+        ${isAdmin?`<button onclick="openEditDoctor('${id}')" style="padding:6px 12px;border:1px solid var(--border);border-radius:8px;background:#fff;cursor:pointer;font-size:12px;font-family:'Sarabun',sans-serif;">✏️ แก้ไข</button>`:''}
+      </div>
+      <!-- เอกสาร -->
+      <div style="padding:8px 16px 12px;border-top:1px solid var(--border);background:var(--s2);">
+        <div style="font-size:10px;color:var(--muted);font-weight:700;margin-bottom:6px;">📎 เอกสาร</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;">
+          ${(doc.files||[]).map(f=>`<a href="${f.url}" target="_blank" style="padding:4px 10px;background:#fff;border:1px solid var(--border);border-radius:8px;font-size:11px;color:var(--accent);text-decoration:none;">📄 ${f.name}</a>`).join('')||'<span style="font-size:11px;color:var(--muted);">ยังไม่มีเอกสาร</span>'}
+          ${isAdmin?`<button onclick="uploadDoctorFileUI('${id}','${doc.name||''}')" style="padding:4px 10px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:11px;cursor:pointer;font-family:'Sarabun',sans-serif;">+ อัพโหลด</button>`:''}
+        </div>
+      </div>
+    </div>`;
+  });
+  html += '</div>';
+
+  const addBtn = document.getElementById('addDoctorBtn');
+  if(addBtn) addBtn.style.display = (session.isAdmin||session.branchId==='b10') ? '' : 'none';
+  el.innerHTML = html;
+}
+
+function openAddDoctor(){ _openDoctorModal(null); }
+function openEditDoctor(id){ _openDoctorModal(id); }
+
+function _openDoctorModal(id){
+  const doc = id ? DOCTORS[id] : {};
+  const isEdit = !!id;
+  const modal = document.createElement('div');
+  modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:700;display:flex;align-items:center;justify-content:center;padding:16px;';
+  modal.innerHTML=`<div style="background:#fff;border-radius:16px;width:100%;max-width:480px;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,0.2);display:flex;flex-direction:column;max-height:90vh;">
+    <div style="background:linear-gradient(135deg,#059669,#10b981);padding:16px 20px;color:#fff;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;">
+      <h3 style="margin:0;font-size:16px;font-weight:800;">${isEdit?'✏️ แก้ไข':'➕ เพิ่ม'}ข้อมูลแพทย์</h3>
+      <button onclick="this.closest('div[style*=fixed]').remove()" style="background:rgba(255,255,255,0.2);border:none;color:#fff;border-radius:8px;padding:4px 10px;cursor:pointer;">✕</button>
+    </div>
+    <div style="overflow-y:auto;flex:1;padding:16px;display:flex;flex-direction:column;gap:10px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div class="mf"><label>ชื่อ-สกุล *</label><input type="text" id="doc_name" value="${doc.name||''}" placeholder="นพ./พญ. ชื่อ นามสกุล"></div>
+        <div class="mf"><label>เลข ว. *</label><input type="text" id="doc_licenseNo" value="${doc.licenseNo||''}" placeholder="ว.XXXXX"></div>
+        <div class="mf"><label>วันหมดอายุใบ ว.</label><input type="date" id="doc_licenseExpiry" value="${doc.licenseExpiry||''}"></div>
+        <div class="mf"><label>เบอร์โทร</label><input type="tel" id="doc_phone" value="${doc.phone||''}" placeholder="0XX-XXX-XXXX"></div>
+        <div class="mf"><label>อัตราค่าตรวจ/ครั้ง (บาท)</label><input type="number" id="doc_fee" value="${doc.fee||''}" placeholder="0"></div>
+        <div class="mf"><label>ธนาคาร</label><input type="text" id="doc_bank" value="${doc.bank||''}" placeholder="กสิกร/กรุงไทย ฯลฯ"></div>
+        <div class="mf" style="grid-column:span 2"><label>เลขบัญชี</label><input type="text" id="doc_bankNo" value="${doc.bankNo||''}" placeholder="XXX-X-XXXXX-X"></div>
+      </div>
+      <div style="background:#f0fdf4;border-radius:10px;padding:12px;">
+        <div style="font-size:12px;font-weight:800;color:#059669;margin-bottom:8px;">🔐 ข้อมูล Login</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <div class="mf"><label>Username</label><input type="text" id="doc_username" value="${doc.username||''}" placeholder="username"></div>
+          <div class="mf"><label>Password</label><input type="password" id="doc_password" value="${doc.password||''}" placeholder="รหัสผ่าน"></div>
+        </div>
+      </div>
+      <div class="mf"><label>หมายเหตุ</label><textarea id="doc_note" style="width:100%;height:60px;padding:8px;border:1.5px solid var(--border);border-radius:8px;font-family:'Sarabun',sans-serif;font-size:13px;resize:none;box-sizing:border-box;">${doc.note||''}</textarea></div>
+    </div>
+    <div style="padding:12px 16px;border-top:1px solid var(--border);background:var(--s2);display:flex;gap:8px;flex-shrink:0;">
+      <button onclick="this.closest('div[style*=fixed]').remove()" style="flex:1;padding:9px;border:1px solid var(--border);border-radius:9px;background:#fff;cursor:pointer;font-family:'Sarabun',sans-serif;font-size:13px;">ยกเลิก</button>
+      <button onclick="_saveDoctor('${id||''}',this)" style="flex:2;padding:9px;border:none;border-radius:9px;background:#059669;color:#fff;cursor:pointer;font-family:'Sarabun',sans-serif;font-size:13px;font-weight:700;">💾 บันทึก</button>
+    </div>
+  </div>`;
+  modal.onclick=e=>{if(e.target===modal)modal.remove();};
+  document.body.appendChild(modal);
+}
+
+function _saveDoctor(id, btn){
+  const name = document.getElementById('doc_name').value.trim();
+  const licenseNo = document.getElementById('doc_licenseNo').value.trim();
+  if(!name){ alert('กรุณากรอกชื่อแพทย์ค่ะ'); return; }
+  btn.disabled=true; btn.textContent='⏳ บันทึก...';
+
+  const data = {
+    name, licenseNo,
+    licenseExpiry: document.getElementById('doc_licenseExpiry').value,
+    phone: document.getElementById('doc_phone').value.trim(),
+    fee: parseFloat(document.getElementById('doc_fee').value)||0,
+    bank: document.getElementById('doc_bank').value.trim(),
+    bankNo: document.getElementById('doc_bankNo').value.trim(),
+    username: document.getElementById('doc_username').value.trim(),
+    password: document.getElementById('doc_password').value.trim(),
+    note: document.getElementById('doc_note').value.trim(),
+    files: id ? (DOCTORS[id]?.files||[]) : [],
+    updatedAt: Date.now(),
+  };
+
+  const docId = id || 'doc_'+Date.now();
+  db.ref('doctors/'+docId).set(data).then(()=>{
+    DOCTORS[docId] = data;
+    btn.closest('div[style*=fixed]').remove();
+    renderDoctors();
+    showSaveIndicator('✅ บันทึกข้อมูลแพทย์แล้วค่ะ');
+  }).catch(()=>{ btn.disabled=false; btn.textContent='💾 บันทึก'; });
+}
+
+// อัพโหลดเอกสาร
+function uploadDoctorFileUI(docId, docName){
+  const input = document.createElement('input');
+  input.type='file'; input.accept='.pdf,.jpg,.jpeg,.png';
+  input.onchange=async()=>{
+    const file = input.files[0];
+    if(!file) return;
+    showSaveIndicator('⏳ กำลังอัพโหลด...','saving');
+    if(!_gdriveToken){
+      requestDriveAccess(async ok=>{
+        if(!ok){ showSaveIndicator('❌ ไม่ได้รับสิทธิ์ Google Drive','error'); return; }
+        await _doUploadDoctorFile(docId, docName, file);
+      });
+    } else {
+      await _doUploadDoctorFile(docId, docName, file);
+    }
+  };
+  input.click();
+}
+
+async function _doUploadDoctorFile(docId, docName, file){
+  const result = await uploadDoctorFile(docId, docName, file, file.name.split('.')[0]);
+  if(!result){ showSaveIndicator('❌ อัพโหลดไม่สำเร็จ','error'); return; }
+  const files = [...(DOCTORS[docId]?.files||[]), result];
+  db.ref('doctors/'+docId+'/files').set(files).then(()=>{
+    if(DOCTORS[docId]) DOCTORS[docId].files = files;
+    renderDoctors();
+    showSaveIndicator('✅ อัพโหลดเอกสารสำเร็จค่ะ');
+  });
+}
+
+// Roster
+function renderRoster(){
+  const el = document.getElementById('rosterContent');
+  if(!el) return;
+  if(!Object.keys(DOCTORS).length){
+    loadDoctors(renderRoster);
+    el.innerHTML='<div style="text-align:center;padding:40px;color:var(--muted);">ยังไม่มีข้อมูลแพทย์ค่ะ</div>';
+    return;
+  }
+  // TODO: render roster table รอบ 26-25
+  el.innerHTML='<div style="text-align:center;padding:40px;color:var(--muted);">🚧 กำลังพัฒนาค่ะ</div>';
 }
 
 function renderBottom5(){
