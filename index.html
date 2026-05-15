@@ -1445,6 +1445,23 @@ td[class*="holiday-col"], th[class*="holiday-col"] { background-color: #ffd4d4 !
       <div class="content" id="mainContent"></div>
     </div>
 
+    <!-- EMPLOYEE REGISTRY -->
+    <div id="pageRegistry" class="page-content" style="display:none;overflow-y:auto;-webkit-overflow-scrolling:touch;">
+      <div style="background:linear-gradient(135deg,#0369a1,#0ea5e9);padding:20px 24px;color:#fff;">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+          <div>
+            <h2 style="font-size:18px;font-weight:800;margin:0;">👤 ทะเบียนพนักงาน</h2>
+            <p style="font-size:11px;opacity:0.7;margin:4px 0 0;">ข้อมูลพนักงานและโควต้าการลารายคน</p>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <input type="text" id="regSearch" placeholder="🔍 ค้นหาชื่อ..." oninput="renderRegistry()" style="padding:8px 12px;border-radius:20px;border:none;font-family:'Sarabun',sans-serif;font-size:13px;width:180px;">
+            <button id="regAddBtn" onclick="openAddRegistry()" style="display:none;padding:8px 16px;background:#fff;color:#0369a1;border:none;border-radius:20px;font-family:'Sarabun',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">+ เพิ่มพนักงาน</button>
+          </div>
+        </div>
+      </div>
+      <div id="registryContent" style="padding:16px;"></div>
+    </div>
+
     <!-- TABLE ALL BRANCHES -->
     <div id="pageTableAll" class="page-content" style="display:none;overflow-y:auto;-webkit-overflow-scrolling:touch;">
       <div class="stats-row" id="statsRowAll"></div>
@@ -2454,7 +2471,7 @@ function getCurrentBranch(){
 let currentTab = 'overview';
 function switchTab(tab, e){
   currentTab = tab;
-  const pages = { overview:'pageOverview', table:'pageTable', tableAll:'pageTableAll', dashboard:'pageDashboard', stats:'pageStats', docs:'pageDocs', mgrleave:'pageMgrleave', holiday:'pageHoliday', log:'pageLog', admin:'pageAdmin' };
+  const pages = { overview:'pageOverview', table:'pageTable', tableAll:'pageTableAll', dashboard:'pageDashboard', stats:'pageStats', docs:'pageDocs', mgrleave:'pageMgrleave', holiday:'pageHoliday', log:'pageLog', admin:'pageAdmin', registry:'pageRegistry' };
   document.querySelectorAll('.page-content').forEach(p=>p.style.display='none');
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   document.querySelectorAll('.bottom-nav-item').forEach(n=>n.classList.remove('active'));
@@ -2467,6 +2484,7 @@ function switchTab(tab, e){
   if(tab==='table') render();
   if(tab==='tableAll') renderTableAll();
   if(tab==='dashboard') renderDashboard();
+  if(tab==='registry') renderRegistry();
   if(tab==='stats') renderStats();
   if(tab==='docs') renderDocs();
   if(tab==='mgrleave') renderMgrLeave();
@@ -2937,14 +2955,48 @@ function addHoliday(){
 function editHoliday(key){
   const info = getHolidayInfo(HOLIDAYS[key]);
   const [d,m] = key.split('/');
-  const newName = prompt('แก้ไขชื่อวันหยุด:', info.name);
-  if(newName===null) return;
-  const newTag = confirm('เป็นหยุดนักขัตฤกษ์ไหม? (OK=นักขัตฤกษ์ / Cancel=Office)') ? 'national' : 'office';
-  HOLIDAYS[key] = { name: newName.trim()||info.name, tag: newTag };
-  saveHolidaysToFirebase();
-  renderHolidayList();
-  render();
-  showSaveIndicator('✅ แก้ไขวันหยุดแล้ว');
+
+  // สร้าง modal แก้ไขวันหยุด
+  const tagOptions = Object.entries(HOLIDAY_TAGS).map(([k,t])=>
+    `<option value="${k}" ${info.tag===k?'selected':''}>${t.icon} ${t.name}</option>`
+  ).join('');
+
+  const modal = document.createElement('div');
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:999;display:flex;align-items:center;justify-content:center;';
+  modal.innerHTML = `
+    <div style="background:#fff;border-radius:16px;padding:24px;width:320px;box-shadow:0 8px 32px rgba(0,0,0,0.2);">
+      <h3 style="font-size:16px;font-weight:800;margin-bottom:16px;">✏️ แก้ไขวันหยุด</h3>
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <div>
+          <label style="font-size:12px;color:#64748b;font-weight:600;">ชื่อวันหยุด</label>
+          <input id="_hdEditName" type="text" value="${info.name}" style="width:100%;padding:8px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-family:'Sarabun',sans-serif;font-size:13px;margin-top:4px;box-sizing:border-box;">
+        </div>
+        <div>
+          <label style="font-size:12px;color:#64748b;font-weight:600;">ประเภท Tag</label>
+          <select id="_hdEditTag" style="width:100%;padding:8px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-family:'Sarabun',sans-serif;font-size:13px;margin-top:4px;box-sizing:border-box;">
+            ${tagOptions}
+          </select>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:20px;">
+        <button onclick="this.closest('div[style]').remove()" style="flex:1;padding:9px;border:1px solid #e2e8f0;border-radius:9px;background:#fff;cursor:pointer;font-family:'Sarabun',sans-serif;font-size:13px;">ยกเลิก</button>
+        <button id="_hdEditSave" style="flex:2;padding:9px;border:none;border-radius:9px;background:#0369a1;color:#fff;cursor:pointer;font-family:'Sarabun',sans-serif;font-size:13px;font-weight:700;">💾 บันทึก</button>
+      </div>
+    </div>`;
+
+  document.body.appendChild(modal);
+  modal.querySelector('#_hdEditSave').onclick = ()=>{
+    const newName = modal.querySelector('#_hdEditName').value.trim();
+    const newTag = modal.querySelector('#_hdEditTag').value;
+    if(!newName){ alert('กรุณากรอกชื่อวันหยุด'); return; }
+    HOLIDAYS[key] = { name: newName, tag: newTag };
+    saveHolidaysToFirebase();
+    renderHolidayList();
+    render();
+    showSaveIndicator('✅ แก้ไขวันหยุดแล้ว');
+    modal.remove();
+  };
+  modal.onclick = e=>{ if(e.target===modal) modal.remove(); };
 }
 
 function deleteHoliday(key){
@@ -3543,6 +3595,7 @@ function showLeaveBalancePopup(bid, ei){
   const startStr = startD ? `${startD.getDate()} ${MONTH_TH[startD.getMonth()+1]} ${startD.getFullYear()+543}` : 'ไม่ระบุ';
   const tenureStr = tenure !== null ? `${Math.floor(tenure)} ปี ${Math.floor((tenure%1)*12)} เดือน` : 'ไม่ทราบ';
 
+  // ── Balance HTML ──
   let balanceHTML = '';
   if(!balance){
     balanceHTML = `<div style="text-align:center;padding:20px;color:var(--muted);font-size:13px;">
@@ -3554,10 +3607,8 @@ function showLeaveBalancePopup(bid, ei){
       if(info.used === 0 && info.entitled === 999) return '';
       const remText = info.remaining === null ? '∞' : info.remaining;
       const remColor = info.remaining === 0 ? 'var(--red)' : info.remaining !== null && info.remaining <= 1 ? '#f59e0b' : 'var(--green)';
-      const paidBadge = info.paidUsed > 0 ? `<span style="background:#d1fae5;color:#065f46;border-radius:4px;padding:1px 5px;font-size:9px;margin-left:4px">paid ${info.paidUsed}วัน</span>` : '';
-      const unpaidBadge = info.unpaidUsed > 0 ? `<span style="background:#fee2e2;color:#991b1b;border-radius:4px;padding:1px 5px;font-size:9px;margin-left:4px">unpaid ${info.unpaidUsed}วัน</span>` : '';
       return `<tr>
-        <td style="padding:8px 12px;font-size:13px;font-weight:600;">${info.label}${paidBadge}${unpaidBadge}</td>
+        <td style="padding:8px 12px;font-size:13px;font-weight:600;">${info.label}</td>
         <td style="padding:8px 12px;text-align:center;font-size:13px;">${info.entitled===999?'ไม่จำกัด':info.entitled} วัน</td>
         <td style="padding:8px 12px;text-align:center;font-size:14px;font-weight:800;color:var(--red);">${info.used}</td>
         <td style="padding:8px 12px;text-align:center;font-size:14px;font-weight:800;color:${remColor};">${remText}</td>
@@ -3567,10 +3618,10 @@ function showLeaveBalancePopup(bid, ei){
     balanceHTML = `<table style="width:100%;border-collapse:collapse;">
       <thead>
         <tr style="background:var(--s2);font-size:10px;color:var(--muted);">
-          <th style="padding:6px 12px;text-align:left;font-family:'IBM Plex Mono',monospace;">ประเภทการลา</th>
-          <th style="padding:6px 12px;text-align:center;font-family:'IBM Plex Mono',monospace;">สิทธิ์/ปี</th>
-          <th style="padding:6px 12px;text-align:center;font-family:'IBM Plex Mono',monospace;">ใช้ไป</th>
-          <th style="padding:6px 12px;text-align:center;font-family:'IBM Plex Mono',monospace;">คงเหลือ</th>
+          <th style="padding:6px 12px;text-align:left;">ประเภทการลา</th>
+          <th style="padding:6px 12px;text-align:center;">สิทธิ์/ปี</th>
+          <th style="padding:6px 12px;text-align:center;">ใช้ไป</th>
+          <th style="padding:6px 12px;text-align:center;">คงเหลือ</th>
         </tr>
       </thead>
       <tbody>${rows}</tbody>
@@ -3585,23 +3636,117 @@ function showLeaveBalancePopup(bid, ei){
   popup.id = 'leaveBalancePopup';
   popup.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:600;display:flex;align-items:center;justify-content:center;padding:20px;';
   popup.innerHTML = `
-    <div style="background:#fff;border-radius:18px;width:100%;max-width:500px;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,0.25);">
-      <div style="background:linear-gradient(135deg,#0369a1,#0ea5e9);padding:18px 20px;color:#fff;display:flex;align-items:center;justify-content:space-between;">
+    <div style="background:#fff;border-radius:18px;width:100%;max-width:540px;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,0.25);display:flex;flex-direction:column;max-height:85vh;">
+      <!-- Header -->
+      <div style="background:linear-gradient(135deg,#0369a1,#0ea5e9);padding:18px 20px;color:#fff;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
         <div>
-          <div style="font-size:16px;font-weight:800;">${emp.name} ${emp.nick||''}</div>
-          <div style="font-size:11px;opacity:0.7;margin-top:2px;">${emp.pos||''} · เริ่มงาน ${startStr} · อายุงาน ${tenureStr}</div>
+          <div style="font-size:16px;font-weight:800;">${emp.name} <span style="opacity:0.8;font-size:13px">(${emp.nick||''})</span></div>
+          <div style="font-size:11px;opacity:0.7;margin-top:2px;">${emp.pos||''} · เริ่มงาน ${startStr} · ${tenureStr}</div>
         </div>
         <button onclick="document.getElementById('leaveBalancePopup').remove()" style="background:rgba(255,255,255,0.2);border:none;color:#fff;border-radius:8px;padding:6px 10px;cursor:pointer;font-size:16px;">✕</button>
       </div>
-      <div style="max-height:60vh;overflow-y:auto;">
-        ${balanceHTML}
+      <!-- Tabs -->
+      <div style="display:flex;border-bottom:1px solid var(--border);background:#f8fafc;flex-shrink:0;">
+        <button id="_tab_balance" onclick="_switchEmpTab('balance')" style="flex:1;padding:10px;border:none;background:var(--accent);color:#fff;font-family:'Sarabun',sans-serif;font-size:12px;font-weight:700;cursor:pointer;">📊 โควต้าวันลา</button>
+        <button id="_tab_history" onclick="_switchEmpTab('history')" style="flex:1;padding:10px;border:none;background:transparent;color:var(--muted);font-family:'Sarabun',sans-serif;font-size:12px;font-weight:600;cursor:pointer;">📅 ประวัติการลา</button>
       </div>
-      <div style="padding:12px 20px;background:var(--s2);border-top:1px solid var(--border);font-size:10px;color:var(--muted);">
-        📋 อ้างอิงกฎหมายแรงงานไทย พ.ร.บ. คุ้มครองแรงงาน พ.ศ. 2541 (แก้ไข 2562)
+      <!-- Content -->
+      <div style="overflow-y:auto;flex:1;">
+        <div id="_tab_content_balance">${balanceHTML}</div>
+        <div id="_tab_content_history" style="display:none;">
+          <div style="padding:20px;text-align:center;color:var(--muted);font-size:13px;">⏳ กำลังโหลดประวัติ...</div>
+        </div>
+      </div>
+      <div style="padding:10px 20px;background:var(--s2);border-top:1px solid var(--border);font-size:10px;color:var(--muted);flex-shrink:0;">
+        📋 อ้างอิงกฎหมายแรงงานไทย พ.ร.บ. คุ้มครองแรงงาน พ.ศ. 2541
       </div>
     </div>`;
   popup.addEventListener('click', e=>{ if(e.target===popup) popup.remove(); });
   document.body.appendChild(popup);
+
+  // โหลดประวัติการลาย้อนหลัง
+  _loadEmpLeaveHistory(bid, ei, emp);
+}
+
+function _switchEmpTab(tab){
+  ['balance','history'].forEach(t=>{
+    document.getElementById('_tab_content_'+t).style.display = t===tab?'':'none';
+    const btn = document.getElementById('_tab_'+t);
+    btn.style.background = t===tab?'var(--accent)':'transparent';
+    btn.style.color = t===tab?'#fff':'var(--muted)';
+  });
+}
+
+function _loadEmpLeaveHistory(bid, ei, emp){
+  const MON_TH=['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+  const MON_FULL=['','มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+
+  // โหลด leaves_v2 ทุก period ที่มี
+  db.ref(`branches/${bid}/leaves_v2`).once('value').then(snap=>{
+    const allPeriods = snap.val() || {};
+    const historyEl = document.getElementById('_tab_content_history');
+    if(!historyEl) return;
+
+    const periods = Object.keys(allPeriods).sort().reverse(); // เรียงใหม่ก่อน
+    if(!periods.length){
+      historyEl.innerHTML = '<div style="padding:30px;text-align:center;color:var(--muted);font-size:13px;">ยังไม่มีประวัติการลาค่ะ</div>';
+      return;
+    }
+
+    let html = '';
+    periods.forEach(periodKey=>{
+      const periodLeaves = allPeriods[periodKey];
+      const empLeaves = periodLeaves?.[ei]||periodLeaves?.[String(ei)]||{};
+      const leaveDays = [];
+
+      // แปลง periodKey "2026-04" → start/end
+      const [yr, mo] = periodKey.split('-').map(Number);
+      const start = new Date(yr, mo-1, 26);
+      const end = new Date(yr, mo, 25);
+      const totalDays = Math.round((end-start)/(1000*60*60*24))+1;
+      const label = `${start.getDate()} ${MON_TH[mo]} – ${end.getDate()} ${MON_TH[mo<12?mo+1:1]} ${end.getFullYear()+543}`;
+
+      // สร้าง DAYS สำหรับ period นี้
+      for(let i=0;i<totalDays;i++){
+        const d = new Date(start); d.setDate(d.getDate()+i);
+        const ld = empLeaves[i]||empLeaves[String(i)];
+        if(ld){
+          const code = typeof ld==='string'?ld:ld.code;
+          const note = typeof ld==='object'?ld.note:'';
+          if(code && code!=='X'){
+            leaveDays.push({ date:d.getDate(), month:d.getMonth()+1, code, note });
+          }
+        }
+      }
+
+      if(!leaveDays.length) return; // ไม่มีการลาใน period นี้ ข้ามไป
+
+      // จัดกลุ่มตาม code
+      const byCode = {};
+      leaveDays.forEach(ld=>{ if(!byCode[ld.code])byCode[ld.code]=[]; byCode[ld.code].push(ld); });
+
+      const codeRows = Object.entries(byCode).map(([code,days])=>{
+        const t = TYPES.find(x=>x.code===code);
+        const dateStr = days.map(d=>`${d.date} ${MON_TH[d.month]}`).join(', ');
+        return `<div style="display:flex;align-items:flex-start;gap:8px;padding:4px 0;">
+          <span style="background:${getClass(code)==='lp'?'#fef2f2':getClass(code)==='pr'?'#fefce8':'#eff6ff'};padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;white-space:nowrap">${code}</span>
+          <span style="font-size:12px;color:var(--text)">${dateStr}</span>
+          <span style="font-size:11px;color:var(--muted);margin-left:auto;white-space:nowrap">${days.length} วัน</span>
+        </div>`;
+      }).join('');
+
+      html += `<div style="padding:14px 16px;border-bottom:1px solid var(--border);">
+        <div style="font-size:12px;font-weight:800;color:var(--accent);margin-bottom:8px;">📅 ${label}</div>
+        <div style="display:flex;flex-direction:column;gap:2px;">${codeRows}</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:6px;text-align:right;">รวม ${leaveDays.length} วัน</div>
+      </div>`;
+    });
+
+    historyEl.innerHTML = html || '<div style="padding:30px;text-align:center;color:var(--muted);font-size:13px;">ไม่มีประวัติการลาค่ะ</div>';
+  }).catch(()=>{
+    const historyEl = document.getElementById('_tab_content_history');
+    if(historyEl) historyEl.innerHTML = '<div style="padding:20px;text-align:center;color:var(--red);font-size:13px;">โหลดข้อมูลไม่ได้ค่ะ</div>';
+  });
 }
 
 // ════════════════════════════════════════════
@@ -3996,6 +4141,239 @@ function attachTooltips(){
     td.addEventListener('mouseenter', e=>showTooltip(e, td.dataset.tip));
     td.addEventListener('mousemove',  e=>positionTooltip(e));
     td.addEventListener('mouseleave', hideTooltip);
+  });
+}
+
+// ════════════════════════════════════════════
+// EMPLOYEE REGISTRY
+// ════════════════════════════════════════════
+
+let EMP_REGISTRY = {}; // { empId: {...} }
+let REG_OPTIONS = {
+  companies: ['Laliza Co., Ltd'],
+  empTypes: ['พนักงานประจำ (FT)', 'พนักงานชั่วคราว (PT)', 'สัญญาจ้าง'],
+};
+
+function loadRegistry(cb){
+  Promise.all([
+    db.ref('employees').once('value'),
+    db.ref('settings/regOptions').once('value'),
+  ]).then(([empSnap, optSnap])=>{
+    EMP_REGISTRY = empSnap.val() || {};
+    if(optSnap.val()){
+      REG_OPTIONS = { ...REG_OPTIONS, ...optSnap.val() };
+    }
+    if(cb) cb();
+  }).catch(()=>{ if(cb) cb(); });
+}
+
+function renderRegistry(){
+  const el = document.getElementById('registryContent');
+  if(!el) return;
+  const search = (document.getElementById('regSearch')?.value||'').toLowerCase();
+  const isHR = session.branchId==='b10' || session.isAdmin;
+  const MON_S=['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+
+  const keys = Object.keys(EMP_REGISTRY).filter(k=>{
+    const e = EMP_REGISTRY[k];
+    if(!search) return true;
+    return (e.name||'').toLowerCase().includes(search) ||
+           (e.nick||'').toLowerCase().includes(search) ||
+           (e.pos||'').toLowerCase().includes(search);
+  });
+
+  if(!keys.length){
+    el.innerHTML = `<div style="text-align:center;padding:60px;color:var(--muted);">
+      ${search ? '🔍 ไม่พบพนักงานที่ค้นหา' : '📋 ยังไม่มีข้อมูลพนักงาน กด "+ เพิ่มพนักงาน" ค่ะ'}
+    </div>`;
+    // ถ้าไม่มีข้อมูล ลอง load ก่อน
+    if(!search && !Object.keys(EMP_REGISTRY).length){
+      loadRegistry(renderRegistry);
+    }
+    return;
+  }
+
+  // จัดกลุ่มตามสาขา
+  const byBranch = {};
+  keys.forEach(k=>{
+    const e = EMP_REGISTRY[k];
+    const bid = e.branchId || 'other';
+    if(!byBranch[bid]) byBranch[bid]=[];
+    byBranch[bid].push({id:k,...e});
+  });
+
+  let html = '';
+  Object.entries(byBranch).forEach(([bid, emps])=>{
+    const bName = BRANCHES.find(x=>x.id===bid)?.name || bid;
+    html += `<div style="margin-bottom:20px;">
+      <div style="font-size:11px;font-weight:800;color:var(--accent);letter-spacing:0.5px;margin-bottom:8px;padding:4px 0;border-bottom:2px solid var(--border);">${bName} · ${emps.length} คน</div>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        ${emps.map(e=>{
+          const startD = e.startDate ? new Date(e.startDate) : null;
+          const startStr = startD ? `${startD.getDate()} ${MON_S[startD.getMonth()+1]} ${startD.getFullYear()+543}` : '—';
+          return `<div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:14px 16px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:box-shadow 0.15s;" onclick="openViewRegistry('${e.id}')" onmouseover="this.style.boxShadow='0 4px 12px rgba(0,0,0,0.08)'" onmouseout="this.style.boxShadow='none'">
+            <div style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#0ea5e9);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:16px;flex-shrink:0;">${(e.nick||e.name||'?')[0]}</div>
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:14px;font-weight:700;color:var(--text);">${e.name||''} <span style="color:var(--muted);font-weight:400;font-size:12px">(${e.nick||''})</span></div>
+              <div style="font-size:11px;color:var(--muted);margin-top:2px;">${e.pos||''} · ${e.empType||''} · เริ่มงาน ${startStr}</div>
+            </div>
+            <div style="text-align:right;flex-shrink:0;">
+              <div style="font-size:10px;color:var(--muted);">${e.company||''}</div>
+              ${isHR ? `<button onclick="event.stopPropagation();openEditRegistry('${e.id}')" style="margin-top:4px;padding:4px 10px;border:1px solid var(--border);border-radius:6px;background:#fff;cursor:pointer;font-size:11px;font-family:'Sarabun',sans-serif;">✏️ แก้ไข</button>` : ''}
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+  });
+
+  el.innerHTML = html;
+}
+
+function openAddRegistry(){
+  _openRegistryModal(null);
+}
+
+function openEditRegistry(id){
+  _openRegistryModal(id);
+}
+
+function openViewRegistry(id){
+  const e = EMP_REGISTRY[id];
+  if(!e) return;
+  const isHR = session.branchId==='b10' || session.isAdmin;
+  if(isHR){ _openRegistryModal(id); return; }
+  // ถ้าไม่ใช่ HR → เปิด popup ดูอย่างเดียว
+  const MON_S=['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+  const startD = e.startDate ? new Date(e.startDate) : null;
+  const startStr = startD ? `${startD.getDate()} ${MON_S[startD.getMonth()+1]} ${startD.getFullYear()+543}` : 'ไม่ระบุ';
+  const modal = document.createElement('div');
+  modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:700;display:flex;align-items:center;justify-content:center;padding:20px;';
+  modal.innerHTML=`<div style="background:#fff;border-radius:16px;width:100%;max-width:420px;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,0.2);">
+    <div style="background:linear-gradient(135deg,#0369a1,#0ea5e9);padding:16px 20px;color:#fff;display:flex;justify-content:space-between;align-items:center;">
+      <div><div style="font-size:16px;font-weight:800;">${e.name} (${e.nick||''})</div><div style="font-size:11px;opacity:0.7;">${e.pos||''}</div></div>
+      <button onclick="this.closest('div[style]').remove()" style="background:rgba(255,255,255,0.2);border:none;color:#fff;border-radius:8px;padding:4px 10px;cursor:pointer;">✕</button>
+    </div>
+    <div style="padding:16px;display:flex;flex-direction:column;gap:8px;font-size:13px;">
+      <div><span style="color:var(--muted);font-size:11px;">บริษัทสังกัด</span><div style="font-weight:600;">${e.company||'—'}</div></div>
+      <div><span style="color:var(--muted);font-size:11px;">ประเภท</span><div style="font-weight:600;">${e.empType||'—'}</div></div>
+      <div><span style="color:var(--muted);font-size:11px;">เบอร์</span><div style="font-weight:600;">${e.phone||'—'}</div></div>
+      <div><span style="color:var(--muted);font-size:11px;">วันเริ่มงาน</span><div style="font-weight:600;">${startStr}</div></div>
+      <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);">
+        <div style="font-size:11px;color:var(--muted);font-weight:700;margin-bottom:6px;">🏖️ โควต้าการลา</div>
+        ${Object.entries(e.quota||{}).map(([code,days])=>`<div style="display:flex;justify-content:space-between;padding:3px 0;">
+          <span>${TYPES.find(t=>t.code===code)?.label||code}</span>
+          <span style="font-weight:700;color:var(--accent)">${days} วัน/ปี</span>
+        </div>`).join('')||'<div style="color:var(--muted);font-size:12px;">ใช้โควต้าเริ่มต้น</div>'}
+      </div>
+    </div>
+  </div>`;
+  modal.onclick=e=>{if(e.target===modal)modal.remove();};
+  document.body.appendChild(modal);
+}
+
+function _openRegistryModal(id){
+  const e = id ? EMP_REGISTRY[id] : {};
+  const isEdit = !!id;
+
+  const companyOpts = REG_OPTIONS.companies.map(c=>`<option value="${c}" ${e.company===c?'selected':''}>${c}</option>`).join('');
+  const typeOpts = REG_OPTIONS.empTypes.map(t=>`<option value="${t}" ${e.empType===t?'selected':''}>${t}</option>`).join('');
+  const branchOpts = BRANCHES.map(b=>`<option value="${b.id}" ${e.branchId===b.id?'selected':''}>${b.name}</option>`).join('');
+  const quotaTypes = TYPES.filter(t=>t.code!=='X');
+
+  const modal = document.createElement('div');
+  modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:700;display:flex;align-items:center;justify-content:center;padding:16px;';
+  modal.innerHTML=`<div style="background:#fff;border-radius:16px;width:100%;max-width:520px;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,0.2);display:flex;flex-direction:column;max-height:90vh;">
+    <div style="background:linear-gradient(135deg,#0369a1,#0ea5e9);padding:16px 20px;color:#fff;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;">
+      <h3 style="margin:0;font-size:16px;font-weight:800;">${isEdit?'✏️ แก้ไข':'➕ เพิ่ม'}ข้อมูลพนักงาน</h3>
+      <button onclick="this.closest('div[style*=fixed]').remove()" style="background:rgba(255,255,255,0.2);border:none;color:#fff;border-radius:8px;padding:4px 10px;cursor:pointer;">✕</button>
+    </div>
+    <div style="overflow-y:auto;flex:1;padding:16px;display:flex;flex-direction:column;gap:12px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div class="mf"><label>ชื่อ-สกุล *</label><input type="text" id="reg_name" value="${e.name||''}" placeholder="ชื่อ นามสกุล"></div>
+        <div class="mf"><label>ชื่อเล่น *</label><input type="text" id="reg_nick" value="${e.nick||''}" placeholder="ชื่อเล่น"></div>
+        <div class="mf"><label>ตำแหน่ง *</label><input type="text" id="reg_pos" value="${e.pos||''}" placeholder="ตำแหน่ง"></div>
+        <div class="mf"><label>เบอร์โทร</label><input type="tel" id="reg_phone" value="${e.phone||''}" placeholder="0XX-XXX-XXXX"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div class="mf"><label>สาขาที่สังกัด</label><select id="reg_branch">${branchOpts}</select></div>
+        <div class="mf"><label>วันเริ่มงาน</label><input type="date" id="reg_startDate" value="${e.startDate||''}"></div>
+        <div class="mf"><label>บริษัทสังกัด</label><select id="reg_company">${companyOpts}</select></div>
+        <div class="mf"><label>ประเภทพนักงาน</label><select id="reg_empType">${typeOpts}</select></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div class="mf"><label>เลขบัตรปชช.</label><input type="text" id="reg_idCard" value="${e.idCard||''}" placeholder="X-XXXX-XXXXX-XX-X" maxlength="17"></div>
+        <div class="mf"><label>ธนาคาร</label><input type="text" id="reg_bank" value="${e.bank||''}" placeholder="กสิกร/กรุงไทย ฯลฯ"></div>
+        <div class="mf" style="grid-column:span 2"><label>เลขบัญชี</label><input type="text" id="reg_bankNo" value="${e.bankNo||''}" placeholder="XXX-X-XXXXX-X"></div>
+      </div>
+      <!-- โควต้าการลา -->
+      <div style="background:var(--s2);border-radius:10px;padding:12px;">
+        <div style="font-size:12px;font-weight:800;color:var(--accent);margin-bottom:8px;">🏖️ โควต้าการลา (ว่างไว้ = ใช้ค่าเริ่มต้น)</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+          ${quotaTypes.map(t=>`<div class="mf"><label>${t.icon} ${t.label}</label>
+            <input type="number" id="reg_quota_${t.code}" value="${e.quota?.[t.code]||''}" placeholder="วัน/ปี" min="0" max="365" style="width:100%;"></div>`).join('')}
+        </div>
+      </div>
+      <!-- หมายเหตุ -->
+      <div class="mf"><label>หมายเหตุ</label><textarea id="reg_note" placeholder="หมายเหตุเพิ่มเติม" style="width:100%;height:60px;padding:8px;border:1.5px solid var(--border);border-radius:8px;font-family:'Sarabun',sans-serif;font-size:13px;resize:none;box-sizing:border-box;">${e.note||''}</textarea></div>
+    </div>
+    <div style="padding:12px 16px;border-top:1px solid var(--border);background:var(--s2);display:flex;gap:8px;flex-shrink:0;">
+      <button onclick="this.closest('div[style*=fixed]').remove()" style="flex:1;padding:9px;border:1px solid var(--border);border-radius:9px;background:#fff;cursor:pointer;font-family:'Sarabun',sans-serif;font-size:13px;">ยกเลิก</button>
+      <button onclick="_saveRegistry('${id||''}',this)" style="flex:2;padding:9px;border:none;border-radius:9px;background:var(--accent);color:#fff;cursor:pointer;font-family:'Sarabun',sans-serif;font-size:13px;font-weight:700;">💾 บันทึก</button>
+      ${isEdit?`<button onclick="_deleteRegistry('${id}',this)" style="padding:9px 14px;background:#fee2e2;color:#b91c1c;border:1px solid #fecaca;border-radius:9px;cursor:pointer;font-family:'Sarabun',sans-serif;font-size:13px;">🗑️</button>`:''}
+    </div>
+  </div>`;
+  modal.onclick=ev=>{if(ev.target===modal)modal.remove();};
+  document.body.appendChild(modal);
+}
+
+function _saveRegistry(id, btn){
+  const name = document.getElementById('reg_name').value.trim();
+  const nick = document.getElementById('reg_nick').value.trim();
+  if(!name||!nick){ alert('กรุณากรอกชื่อและชื่อเล่น'); return; }
+  btn.disabled=true; btn.textContent='⏳ บันทึก...';
+
+  const quota = {};
+  TYPES.filter(t=>t.code!=='X').forEach(t=>{
+    const v = parseInt(document.getElementById('reg_quota_'+t.code)?.value||'');
+    if(!isNaN(v) && v > 0) quota[t.code] = v;
+  });
+
+  const data = {
+    name, nick,
+    pos: document.getElementById('reg_pos').value.trim(),
+    phone: document.getElementById('reg_phone').value.trim(),
+    branchId: document.getElementById('reg_branch').value,
+    startDate: document.getElementById('reg_startDate').value,
+    company: document.getElementById('reg_company').value,
+    empType: document.getElementById('reg_empType').value,
+    idCard: document.getElementById('reg_idCard').value.trim(),
+    bank: document.getElementById('reg_bank').value.trim(),
+    bankNo: document.getElementById('reg_bankNo').value.trim(),
+    note: document.getElementById('reg_note').value.trim(),
+    quota,
+    updatedAt: Date.now(),
+    updatedBy: session.userName || session.branchId,
+  };
+
+  const empId = id || 'emp_' + Date.now();
+  db.ref('employees/'+empId).set(data).then(()=>{
+    EMP_REGISTRY[empId] = data;
+    btn.closest('div[style*=fixed]').remove();
+    renderRegistry();
+    showSaveIndicator('✅ บันทึกข้อมูลพนักงานแล้ว');
+    writeLog('registry', (id?'แก้ไข':'เพิ่ม')+'พนักงาน '+name);
+  }).catch(()=>{ btn.disabled=false; btn.textContent='💾 บันทึก'; });
+}
+
+function _deleteRegistry(id, btn){
+  const e = EMP_REGISTRY[id];
+  if(!confirm(`ต้องการลบข้อมูล "${e?.name}" ออกจากทะเบียนหรือไม่?`)) return;
+  db.ref('employees/'+id).remove().then(()=>{
+    delete EMP_REGISTRY[id];
+    btn.closest('div[style*=fixed]').remove();
+    renderRegistry();
+    showSaveIndicator('🗑️ ลบข้อมูลพนักงานแล้ว');
   });
 }
 
@@ -5324,6 +5702,7 @@ function updateNavForBranch(){
     show('nav-holiday',  hasPerm('holiday', isAdmin));
     show('nav-log',      hasPerm('log', isMgr||isAdmin));
     show('nav-admin',    hasPerm('admin', isAdmin));
+    show('nav-registry', true); // ทุกคนเห็น แต่แก้ได้เฉพาะ HR+Admin
     show('bn-overview',  hasPerm('overview', true));
     show('bn-table',     hasPerm('table', true));
     show('bn-tableAll',  hasPerm('tableAll', false));
@@ -5344,6 +5723,9 @@ function updateNavForBranch(){
   // export button
   const expBtn = document.getElementById('exportBtn');
   if(expBtn) expBtn.style.display = hasPerm('export', isMgr||isAdmin) ? '' : 'none';
+  const regAddBtn = document.getElementById('regAddBtn');
+  const canEditReg = isAdmin || session.branchId === 'b10';
+  if(regAddBtn) regAddBtn.style.display = canEditReg ? '' : 'none';
   // edit permission
   const _locked = !hasPerm('edit', isMgr||isAdmin);
   ['addEmpBtn'].forEach(id=>{ const el=document.getElementById(id); if(el) el.style.display=hasPerm('edit',isMgr||isAdmin)?'':'none'; });
