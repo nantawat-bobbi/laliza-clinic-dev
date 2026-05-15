@@ -1325,7 +1325,7 @@ td[class*="holiday-col"], th[class*="holiday-col"] { background-color: #ffd4d4 !
       </div>
       <div class="sidebar-actions" style="margin-top:8px;">
         <button class="sidebar-btn" id="changePwBtn" onclick="openChangePw()">🔑 รหัส</button>
-        <button class="sidebar-btn" id="addEmpBtn" onclick="openAddEmp()">+ พนักงาน</button>
+        <button class="sidebar-btn" id="addEmpBtn" onclick="openAddEmp()" style="display:none">+ พนักงาน</button>
         <button class="sidebar-btn" id="exportBtn" onclick="openExportModal()" style="background:linear-gradient(135deg,#059669,#10b981);color:#fff;border:none;display:none;transition:transform 0.15s" onmousedown="this.style.transform='scale(0.95)'" onmouseup="this.style.transform='scale(1)'">
   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align:-2px;margin-right:4px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export</button>
         <button class="sidebar-btn danger" onclick="doLogout()">ออก</button>
@@ -1564,6 +1564,7 @@ td[class*="holiday-col"], th[class*="holiday-col"] { background-color: #ffd4d4 !
             <button onclick="cleanAllDuplicates()" style="padding:10px 18px;background:#f59e0b;color:#fff;border:none;border-radius:9px;font-family:'Sarabun',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">🧹 ล้างข้อมูลซ้ำ</button>
             <button onclick="forceReloadFromFirebase()" style="padding:10px 18px;background:#6366f1;color:#fff;border:none;border-radius:9px;font-family:'Sarabun',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">🔄 โหลดข้อมูลใหม่</button>
             <button onclick="renderActivityLog()" style="padding:10px 18px;background:#10b981;color:#fff;border:none;border-radius:9px;font-family:'Sarabun',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">📋 ดูประวัติ</button>
+            <button onclick="cloneEmpsToRegistry(this)" style="padding:10px 18px;background:#0369a1;color:#fff;border:none;border-radius:9px;font-family:'Sarabun',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">👤 โคลนพนักงาน → ทะเบียน</button>
           </div>
         </div>
 
@@ -1686,7 +1687,7 @@ td[class*="holiday-col"], th[class*="holiday-col"] { background-color: #ffd4d4 !
       <div style="width:40px;height:4px;background:rgba(255,255,255,0.2);border-radius:2px;margin:0 auto 16px;"></div>
       <div style="color:rgba(255,255,255,0.5);font-size:10px;font-family:'IBM Plex Mono',monospace;margin-bottom:10px;text-transform:uppercase;letter-spacing:1px;">เมนูเพิ่มเติม</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">
-        <button onclick="openAddEmp();toggleMobileMenu()" style="padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.08);color:#fff;font-family:'Sarabun',sans-serif;font-size:13px;font-weight:600;cursor:pointer;">+ เพิ่มพนักงาน</button>
+        <button onclick="openAddEmp();toggleMobileMenu()" style="display:none;padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.08);color:#fff;font-family:'Sarabun',sans-serif;font-size:13px;font-weight:600;cursor:pointer;">+ เพิ่มพนักงาน</button>
         <button onclick="openChangePw();toggleMobileMenu()" style="padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.08);color:#fff;font-family:'Sarabun',sans-serif;font-size:13px;font-weight:600;cursor:pointer;">🔑 เปลี่ยนรหัส</button>
         <button id="mbn-docs" onclick="switchTab('docs',event);toggleMobileMenu()" style="padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.08);color:#fff;font-family:'Sarabun',sans-serif;font-size:13px;font-weight:600;cursor:pointer;">📄 เอกสาร</button>
         <button onclick="doLogout()" style="padding:12px;border-radius:10px;border:1px solid rgba(239,68,68,0.3);background:rgba(239,68,68,0.15);color:#fca5a5;font-family:'Sarabun',sans-serif;font-size:13px;font-weight:600;cursor:pointer;">ออกจากระบบ</button>
@@ -4380,6 +4381,76 @@ function _deleteRegistry(id, btn){
   });
 }
 
+// ════════════════════════════════════════════
+// CLONE EMPS → REGISTRY (ทำครั้งเดียว)
+// ════════════════════════════════════════════
+function cloneEmpsToRegistry(btn){
+  if(!confirm('โคลนข้อมูลพนักงานทุกสาขาเข้าสู่ทะเบียน?\nข้อมูลที่มีอยู่แล้วจะไม่ถูกเขียนทับค่ะ')) return;
+  btn.disabled = true;
+  btn.textContent = '⏳ กำลังโคลน...';
+
+  // โหลด employees ที่มีอยู่ก่อน
+  db.ref('employees').once('value').then(snap=>{
+    const existing = snap.val() || {};
+    // สร้าง set ของชื่อ+สาขาที่มีแล้ว
+    const existingKeys = new Set(
+      Object.values(existing).map(e=>`${e.branchId}_${e.name}`)
+    );
+
+    const batch = {};
+    let count = 0;
+
+    BRANCHES.forEach(b=>{
+      const emps = toArray(b.emps||[]);
+      emps.forEach(emp=>{
+        if(!emp||!emp.name) return;
+        const key = `${b.id}_${emp.name}`;
+        if(existingKeys.has(key)) return; // มีอยู่แล้ว ข้ามไป
+
+        const empId = 'emp_' + b.id + '_' + Date.now() + '_' + Math.random().toString(36).slice(2,6);
+        batch[empId] = {
+          name: emp.name || '',
+          nick: emp.nick || '',
+          pos: emp.pos || '',
+          phone: emp.phone || '',
+          note: emp.note || '',
+          startDate: emp.startDate || '',
+          branchId: b.id,
+          branchName: b.name || '',
+          company: '',
+          empType: '',
+          idCard: '',
+          bank: '',
+          bankNo: '',
+          quota: {},
+          clonedFrom: 'branches',
+          createdAt: Date.now(),
+        };
+        count++;
+      });
+    });
+
+    if(!count){
+      btn.disabled = false;
+      btn.textContent = '👤 โคลนพนักงาน → ทะเบียน';
+      showSaveIndicator('✅ ข้อมูลทั้งหมดมีอยู่แล้วค่ะ');
+      return;
+    }
+
+    db.ref('employees').update(batch).then(()=>{
+      Object.assign(EMP_REGISTRY, batch);
+      btn.disabled = false;
+      btn.textContent = '👤 โคลนพนักงาน → ทะเบียน';
+      showSaveIndicator(`✅ โคลนพนักงานสำเร็จ ${count} คนค่ะ`);
+      writeLog('registry', `โคลนพนักงาน ${count} คนเข้าทะเบียน`);
+    }).catch(e=>{
+      btn.disabled = false;
+      btn.textContent = '👤 โคลนพนักงาน → ทะเบียน';
+      showSaveIndicator('❌ เกิดข้อผิดพลาดค่ะ', 'error');
+    });
+  });
+}
+
 function renderBottom5(){
   const section = document.getElementById('bottom5Section');
   if(!section) return;
@@ -5729,9 +5800,9 @@ function updateNavForBranch(){
   const regAddBtn = document.getElementById('regAddBtn');
   const canEditReg = isAdmin || session.branchId === 'b10';
   if(regAddBtn) regAddBtn.style.display = canEditReg ? '' : 'none';
-  // edit permission
-  const _locked = !hasPerm('edit', isMgr||isAdmin);
-  ['addEmpBtn'].forEach(id=>{ const el=document.getElementById(id); if(el) el.style.display=hasPerm('edit',isMgr||isAdmin)?'':'none'; });
+  // addEmpBtn ซ่อนถาวร — ใช้หน้าทะเบียนพนักงานแทน
+  const addEmpBtnEl = document.getElementById('addEmpBtn');
+  if(addEmpBtnEl) addEmpBtnEl.style.display = 'none';
 }
 
 // ══ INIT ══
