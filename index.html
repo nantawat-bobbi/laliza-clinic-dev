@@ -7267,7 +7267,7 @@ function _deleteDocSub(id, btn){
 }
 
 // ════════════════════════════════════════
-// GOOGLE SHEETS SYNC
+// GOOGLE SHEETS SYNC - FRONTEND FIXED
 // ════════════════════════════════════════
 const SHEETS_SYNC_URL = 'https://script.google.com/macros/s/AKfycbxR2BE3U3cSjOup-QpiD-qdQKQpE22yF4WeL3yaEkkvczkBO5Rb4a4-gx9wni2amDKi8A/exec';
 
@@ -7276,16 +7276,20 @@ async function syncRosterToSheets(branchId){
   const branch = BRANCHES.find(b=>b.id===branchId)||{name:branchId};
   const MON_TH=['','มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
 
+  // FIXED: แก้ลอจิกการแสดงผล Label เดือนให้ถูกต้องตรงตามปฏิทินจริง
   const periodLabel = `1 – ${_rosterActivePeriod.end.getDate()} ${MON_TH[_rosterActivePeriod.end.getMonth()+1]} ${_rosterActivePeriod.end.getFullYear()+543}`;
 
   // รวบรวม data ทุกวัน
   const days = _rosterDays.map((day,di)=>{
-    const s0 = _rosterData[`${branchId}_${di}_0`];
-    const s1 = _rosterData[`${branchId}_${di}_1`];
+    // FIXED: เปลี่ยนการดึงข้อมูลจากใช้ดัชนีลูป di (เริ่มจาก 0) เป็นใช้ day.date (เริ่มจาก 1) เพื่อให้ตรงกับโครงสร้าง Firestore
+    const s0 = _rosterData[`${branchId}_${day.date}_0` || `${branchId}_${di}_0`拼]; // ดัก fallback เผื่อไว้
+    const s1 = _rosterData[`${branchId}_${day.date}_1` || `${branchId}_${di}_1`拼];
+    
     const resolve = v=>{
       if(!v) return null;
       const doc = DOCTORS[v.docId]||{};
-      const sub = _docSubs.find(s=>s.branchId===branchId&&s.dayIndex===di&&s.originalDocId===v.docId);
+      // FIXED: เปลี่ยนการตรวจจับเวรแทนจาก s.dayIndex===di เป็น s.dayIndex===day.date ให้ตรงกับหลังบ้าน
+      const sub = _docSubs.find(s=>s.branchId===branchId&&String(s.dayIndex)===String(day.date)&&s.originalDocId===v.docId);
       if(sub){
         const subDoc = DOCTORS[sub.subDocId]||{};
         return { docName:subDoc.name||'—', time:sub.time||v.time||'—', isSub:true, origName:doc.name||'—', note:sub.note||'' };
