@@ -2179,9 +2179,7 @@ td[class*="holiday-col"], th[class*="holiday-col"] { background-color: #ffd4d4 !
 
 <script>
 
-console.log("SCRIPT START");
 
-alert("DEBUG FILE LOADED");
 
 </script>
 // ══════════════════════════════════════════
@@ -2232,34 +2230,6 @@ try {
 } catch (e) {
 
     console.error("Database ERROR =", e);
-
-}
-
-let fdb;
-
-try {
-
-    fdb = firebase.firestore();
-
-    console.log("Firestore connected =", fdb);
-
-} catch(e) {
-
-    console.error("Firestore ERROR =", e);
-
-}
-
-let storage;
-
-try {
-
-    storage = firebase.storage();
-
-    console.log("Storage connected =", storage);
-
-} catch(e) {
-
-    console.error("Storage ERROR =", e);
 
 }
 
