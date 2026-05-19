@@ -2193,17 +2193,71 @@ const firebaseConfig = {
   messagingSenderId: "1052920426382",
   appId: "1:1052920426382:web:e07f91f2e56d0fc7497edf"
 };
-firebase.initializeApp(firebaseConfig);
+console.log("===== FIREBASE INIT START =====");
+
+console.log("firebase object =", firebase);
+
+console.log("firebase.apps BEFORE =", firebase.apps);
+
 if (!firebase.apps.length) {
 
-   firebase.initializeApp(firebaseConfig);
+    console.log("Initializing Firebase...");
+
+    firebase.initializeApp(firebaseConfig);
+
+    console.log("Firebase initialized");
+
+} else {
+
+    console.log("Firebase already initialized");
 
 }
-// init Firestore
+
+console.log("firebase.apps AFTER =", firebase.apps);
+
+let db;
+
 try {
-  fdb = firebase.firestore();
-} catch(e) { console.warn('Firestore init failed:', e.message); }
-const storage = firebase.storage();
+
+    db = firebase.database();
+
+    console.log("Database connected =", db);
+
+} catch (e) {
+
+    console.error("Database ERROR =", e);
+
+}
+
+let fdb;
+
+try {
+
+    fdb = firebase.firestore();
+
+    console.log("Firestore connected =", fdb);
+
+} catch(e) {
+
+    console.error("Firestore ERROR =", e);
+
+}
+
+let storage;
+
+try {
+
+    storage = firebase.storage();
+
+    console.log("Storage connected =", storage);
+
+} catch(e) {
+
+    console.error("Storage ERROR =", e);
+
+}
+
+console.log("===== FIREBASE INIT END =====");
 
 // เรียก buildLoginGrid เมื่อ page โหลดเสร็จ
 window.addEventListener('DOMContentLoaded', ()=>{
