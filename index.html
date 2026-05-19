@@ -2263,8 +2263,19 @@ try {
 
 }
 
-console.log("===== FIREBASE INIT END =====");
+db.ref("branches").once("value")
+.then(snapshot => {
 
+    console.log("BRANCH DATA =", snapshot.val());
+
+})
+.catch(err => {
+
+    console.error("BRANCH LOAD ERROR =", err);
+
+});
+
+console.log("===== FIREBASE INIT END =====");
 // เรียก buildLoginGrid เมื่อ page โหลดเสร็จ
 window.addEventListener('DOMContentLoaded', ()=>{
   if(typeof buildLoginGrid === 'function') buildLoginGrid();
