@@ -1,0 +1,1778 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Laliza Clinic — Enterprise Operations Portal</title>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f0f2f5; --sur:#ffffff; --acc:#1971c2; --acc2:#1864ab;
+  --grn:#2f9e44; --amb:#f08c00; --red:#c92a2a;
+  --tx:#212529; --tx2:#495057; --tx3:#868e96;
+  --bdr:#dee2e6; --bdr2:#ced4da;
+  --font-ui: 'Sarabun', sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:var(--font-ui);background:var(--bg);color:var(--tx);min-height:100vh;font-size:14px;overflow-x:hidden;}
+.app{display:flex;min-height:100vh;}
+
+/* LOGIN SCREEN */
+#login-screen { position:fixed; inset:0; background:var(--bg); z-index:99999; display:flex !important; align-items:center; justify-content:center; }
+#login-screen.hidden { display:none !important; }
+.login-box { background:#fff; padding:40px; border-radius:12px; box-shadow:0 10px 25px rgba(0,0,0,0.1); width:100%; max-width:400px; text-align:center; }
+.login-box h2 { color:var(--acc); margin-bottom:5px; font-weight:800; letter-spacing:1px; }
+.login-box p { color:var(--tx3); margin-bottom:25px; font-size:13px; }
+.login-input-group { text-align:left; margin-bottom:15px; }
+.login-input-group label { font-size:12px; font-weight:600; color:var(--tx2); }
+.login-input-group input { width:100%; padding:12px; margin-top:5px; border-radius:6px; border:1px solid #ced4da; font-family:inherit; font-size:16px; text-align:center; font-weight:bold; letter-spacing:2px; outline:none; }
+.login-input-group input:focus { border-color:var(--acc); }
+.btn-login { width:100%; padding:12px; background:var(--acc); color:#fff; border:none; border-radius:6px; font-weight:700; font-size:15px; cursor:pointer; margin-top:10px; transition:0.2s; }
+.btn-login:hover { background:var(--acc2); }
+
+/* SIDEBAR LAYOUT FRAME */
+.sidebar{width:220px;background:#1a1d23;border-right:1px solid #2d3139;display:flex;flex-direction:column;flex-shrink:0;position:sticky;top:0;height:100vh;}
+.slogo{padding:20px;border-bottom:1px solid #2d3139;color:#fff;font-weight:700;font-size:16px;letter-spacing:1px;}
+.nav{flex:1;padding:10px;overflow-y:auto;}
+.ni{display:flex;align-items:center;gap:10px;padding:12px;border-radius:6px;cursor:pointer;color:#9ca3af;font-size:14px;transition:0.2s;margin-bottom:5px;}
+.ni:hover{background:#252830;color:#fff;}
+.ni.active{background:var(--acc);color:#fff;font-weight:600;}
+.main{flex:1;background:var(--bg);display:flex;flex-direction:column;min-width:0;height:100vh;overflow-y:auto;}
+.tp{display:none;padding:0;flex:1;}
+
+/* CONTROLS BAR & ACCENTS */
+.ph{background:#fff;border-bottom:1px solid var(--bdr);padding:15px 24px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:20;}
+.ptitle{font-size:18px;font-weight:700;color:var(--tx);}
+.ha{display:flex;gap:8px;align-items:center;}
+.btn{padding:8px 16px;border-radius:6px;border:1px solid transparent;cursor:pointer;font-size:13px;font-family:inherit;font-weight:600;transition:0.2s;display:flex;align-items:center;gap:5px;}
+.bp{background:var(--acc);color:#fff;} .bp:hover{background:var(--acc2);}
+.bs{background:var(--grn);color:#fff;} 
+.bg2{background:#fff;color:var(--tx2);border:1px solid var(--bdr2);} .bg2:hover{background:#f8f9fa;}
+.bpng{background:#20c997;color:#fff;} .bpng:hover{background:#12b886;}
+.bgsync{background:#845ef7;color:#fff;} .bgsync:hover{background:#7048e8;}
+
+select,input[type=text],input[type=date],input[type=time],input[type=month],input[type=number],textarea{
+  background:#fff;border:1px solid var(--bdr2);border-radius:4px;padding:6px 10px;
+  color:var(--tx);font-size:13px;font-family:inherit;outline:none;
+}
+select:focus,input:focus,textarea:focus{border-color:var(--acc);}
+select:disabled{background:#e9ecef;cursor:not-allowed;font-weight:bold;color:var(--acc);}
+
+/* DATA CONTAINERS */
+.pc{padding:24px;}
+.kgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:15px;margin-bottom:20px;}
+.kc{background:#fff;border:1px solid var(--bdr);border-radius:8px;padding:15px;box-shadow:0 2px 4px rgba(0,0,0,0.02);position:relative;overflow:hidden;}
+.klbl{font-size:12px;color:var(--tx3);font-weight:600;margin-bottom:5px;}
+.kval{font-size:22px;font-weight:700;}
+.chart-box{background:#fff;border:1px solid var(--bdr);border-radius:8px;padding:15px;margin-bottom:20px;box-shadow:0 2px 4px rgba(0,0,0,0.02);}
+
+/* MASTER BOARDS */
+.gt-table { width:100%; border-collapse:collapse; margin-bottom:20px; background:#fff; border:1px solid var(--bdr); border-radius:8px; overflow:hidden; }
+.gt-table th, .gt-table td { padding:12px 15px; text-align:center; border-bottom:1px solid var(--bdr); }
+.gt-table th { background:#f8f9fa; font-weight:700; color:var(--tx); }
+.gt-table tr:hover { background:#f8f9fa; }
+
+/* REVENUE DATA RENDERERS */
+.rev-wrap{background:#fff;border:1px solid var(--bdr);border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.05);display:flex;flex-direction:column;}
+.rev-table-container{overflow-x:auto;max-height:550px;border-bottom:2px solid #000;}
+.rev-tbl{width:100%;border-collapse:collapse;font-size:13px;min-width:1800px;}
+.rev-tbl th{padding:8px 4px;border:1px solid #aaa;text-align:center;font-weight:700;white-space:nowrap;position:sticky;top:0;z-index:2;box-shadow:0 1px 0 #999;}
+.rev-tbl th:first-child{left:0;z-index:3;}
+.rev-tbl td{border:1px solid #ccc;padding:2px;position:relative;}
+.rev-tbl td:first-child{text-align:center;font-weight:600;background:#f3f4f6;position:sticky;left:0;z-index:1;box-shadow:1px 0 0 #ccc;padding:0;}
+
+.bg-date{background:#f3f4f6;} .bg-total{background:#dbeafe;} .bg-op{background:#f8d7da;}
+.bg-med{background:#d1e7dd;} .bg-treat{background:#e2d9f3;} .bg-hd{background:#cff4fc;}
+.bg-gw{background:#f3d0e2;} .bg-chg{background:#fff3cd;} .bg-drp{background:#d1e7dd;}
+.bg-mem{background:#f3f4f6;} .bg-old{background:#fff3cd;} .bg-new{background:#d1e7dd;} .bg-sum{background:#dbeafe;}
+
+/* STABLE BOX INPUTS WITH FORCED VISIBILITY LINES */
+.r-inp{width:100%;height:32px;border:1px solid #ced4da !important;background:#ffffff !important;text-align:right;font-size:14px;font-weight:700;padding:4px 8px;color:#1D4ED8;border-radius:4px;outline:none;cursor:text;}
+.r-inp:hover{background:#f1f3f5 !important; border-color:var(--acc) !important;}
+.r-inp:focus{background:#fff3cd !important;box-shadow:inset 0 0 0 1px var(--acc);border-color:var(--acc) !important;}
+.r-inp[readonly]{color:#000!important;cursor:default;background:#f8f9fa!important;border:none !important;box-shadow:none;}
+select.r-inp { background:#ffffff !important; text-align-last: center; padding:2px; }
+
+.rev-sum-grid{display:grid;grid-template-columns:300px 1fr;background:#fff;border-top:1px solid var(--bdr);box-shadow:inset 0 2px 4px rgba(0,0,0,0.02);}
+.rev-sum-left{border-right:2px solid #ccc;padding:15px;background:#f8f9fa;}
+.rev-sum-right{padding:15px;display:grid;grid-template-columns:repeat(3,1fr);gap:20px;background:#fff;}
+.rs-row{display:flex;justify-content:space-between;margin-bottom:8px;font-size:14px;border-bottom:1px dotted #ccc;padding-bottom:4px;}
+.rs-lbl{font-weight:600;color:var(--tx2); } .rs-val{font-weight:700;color:#000;} .rs-val.fire{color:#d9381e;font-size:16px;}
+
+/* DAILY ACCOUNTING MATRIX STYLE */
+.paper-ui{background:#fff;padding:40px;border-radius:8px;box-shadow:0 2px 10px rgba(0,0,0,0.05);max-width:1100px;margin:0 auto;}
+.paper-ui input{border:none;border-bottom:1px dotted #ccc;background:transparent;color:#1D4ED8;font-weight:700;font-size:15px;text-align:center;width:100%;}
+.paper-ui input.red-tx{color:var(--red)!important;}
+.pdf-table{width:100%;border-collapse:collapse;margin:20px 0;font-size:13px;}
+.pdf-table th, .pdf-table td{border:1px solid #000;padding:6px;vertical-align:middle;}
+.pdf-table th{background:#f0f0f0;text-align:center;font-weight:700;}
+
+.toast{position:fixed;bottom:20px;right:20px;background:#212529;border-radius:6px;padding:12px 20px;font-size:14px;color:#fff;z-index:9998;box-shadow:0 4px 12px rgba(0,0,0,0.15);}
+
+/* ===== A4 DAILY OPS DOCUMENT v3 ===== */
+.a4-doc{background:#fff;width:100%;max-width:1020px;margin:0 auto;padding:18px 24px;font-family:'Sarabun',sans-serif;color:#1a1a1a;font-size:13px;border:0.5px solid #ddd;}
+.a4d-header{display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #1a1a1a;padding-bottom:8px;margin-bottom:10px;}
+.a4d-brand{font-size:11px;color:#888;letter-spacing:2px;}
+.a4d-title{font-size:19px;font-weight:700;text-align:center;flex:1;}
+.a4d-update{font-size:11px;color:#888;}
+.a4d-meta{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0;border:1px solid #bbb;margin-bottom:8px;}
+.a4d-mc{border-right:1px solid #bbb;padding:6px 10px;}
+.a4d-mc:last-child{border-right:none;}
+.a4d-ml{font-size:9px;color:#888;text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px;}
+.a4d-sel{border:none;background:transparent;width:100%;font-family:'Sarabun',sans-serif;}
+.a4d-sel-br{font-size:20px;font-weight:700;color:#1a1a1a;}
+.a4d-inp{border:none;background:transparent;width:100%;font-family:'Sarabun',sans-serif;}
+.a4d-inp-dt{font-size:17px;font-weight:700;}
+.a4d-sel-doc{font-size:15px;font-weight:700;border-bottom:1px dotted #bbb;display:block;width:100%;}
+
+/* 3-column body: left | center | right */
+.a4d-body{display:grid;grid-template-columns:1fr 90px 1fr;gap:0;border:1px solid #bbb;margin-bottom:0;}
+.a4d-left{border-right:1px solid #bbb;}
+.a4d-center{border-right:1px solid #bbb;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px 4px;background:#fffef0;}
+.a4d-center-lbl{font-size:10px;color:#888;text-align:center;margin-bottom:4px;font-weight:600;}
+.a4d-center-icon{font-size:18px;margin-bottom:4px;}
+.a4d-center-val{font-size:22px;font-weight:700;color:#1D4ED8;text-align:center;}
+.a4d-center-inp{border:none;border-bottom:1px dotted #bbb;background:transparent;font-size:22px;font-weight:700;color:#1D4ED8;width:70px;text-align:center;font-family:'Sarabun',sans-serif;}
+.a4d-center-sub{font-size:10px;color:#888;margin-top:2px;}
+
+.a4d-tbl{width:100%;border-collapse:collapse;}
+.a4d-tbl th{background:#f0f0f0;border:1px solid #bbb;padding:6px 6px;font-size:11px;font-weight:700;text-align:center;}
+.a4d-tbl th.tl{text-align:left;}
+.a4d-tbl td{border:1px solid #bbb;padding:0;vertical-align:middle;}
+.tc{padding:5px 7px;font-size:17px;font-weight:700;text-align:center;min-height:22px;}
+.tl2{text-align:left;font-weight:500;font-size:13px;color:#1a1a1a;padding:5px 7px;}
+.tv{color:#1D4ED8;}
+.tr2{color:#c92a2a;}
+.ti input,.ti select{border:none;background:transparent;width:100%;font-size:17px;font-weight:700;color:#1D4ED8;text-align:center;font-family:'Sarabun',sans-serif;padding:4px;}
+.ti-red input{color:#c92a2a!important;}
+.a4d-muted{color:#aaa!important;font-style:italic;}
+.a4d-sub{background:#f0f0f0;}
+.a4d-sub td{font-weight:700!important;}
+.a4d-sec-hd{background:#f0f4f8;font-size:11px;font-weight:700;color:#444;padding:4px 7px!important;border-top:1px solid #bbb;}
+
+/* right panel grand total at bottom */
+.a4d-grand-cell{background:#fff8f8;text-align:center;padding:10px 8px!important;border-top:2px solid #bbb!important;}
+.a4d-grand-lbl{font-size:11px;color:#888;margin-bottom:4px;}
+.a4d-grand-val{font-size:28px;font-weight:700;color:#c92a2a;}
+
+/* app row with pax field */
+.app-pax-inp{border:none;border-bottom:1px dotted #bbb;background:transparent;font-size:13px;color:#555;width:45px;text-align:center;font-family:'Sarabun',sans-serif;}
+
+/* bill footer */
+.a4d-bill-row{border:1px solid #bbb;border-top:none;padding:8px 12px;}
+.a4d-bill-line{display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin-bottom:6px;}
+.a4d-bl{font-size:13px;font-weight:600;color:#555;white-space:nowrap;}
+.a4d-bi{border:none;border-bottom:1px dotted #bbb;background:transparent;font-size:15px;font-weight:700;color:#1D4ED8;width:110px;text-align:center;font-family:'Sarabun',sans-serif;padding:2px 4px;}
+.a4d-bi.wide{width:200px;}
+.a4d-bi.red{color:#c92a2a;}
+.a4d-note-row{border:1px solid #bbb;border-top:none;padding:6px 12px;display:flex;align-items:center;gap:8px;font-size:13px;}
+
+/* 2-box signature */
+.a4d-sig2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:10px;}
+.a4d-sigbox{border:1px solid #bbb;padding:10px 14px;min-height:90px;}
+.a4d-sig-title{font-size:11px;color:#888;margin-bottom:8px;}
+.a4d-sig-line2{border-bottom:1px solid #bbb;margin:28px 10px 6px;}
+.a4d-sig-paren{font-size:12px;color:#888;text-align:center;}
+.a4d-sig-date{font-size:11px;color:#aaa;margin-top:6px;}
+
+.a4d-stamp{text-align:center;font-size:9px;color:#ccc;padding-top:6px;margin-top:8px;border-top:1px solid #eee;}
+</style>
+</head>
+<body>
+
+<div id="login-screen">
+  <div class="login-box">
+    <h2>LALIZA CLINIC</h2>
+    <p>ระบุรหัสประจำตัวพนักงานเพื่อเข้าสู่ระบบปฏิบัติการ</p>
+    <div class="login-input-group">
+      <label>รหัสผ่านส่วนบุคคล (PIN)</label>
+      <input type="password" id="login-pass" placeholder="•••••" autocomplete="new-password">
+    </div>
+    <button class="btn-login" id="loginBtn">เข้าสู่ระบบ</button>
+  </div>
+</div>
+
+<div class="app" id="main-app" style="display:none;">
+
+  <div class="sidebar no-print">
+    <div class="slogo">LALIZA CLINIC<br><span id="nav-user-label" style="font-size:11px;color:#845ef7;font-weight:normal;"></span></div>
+    <nav class="nav">
+      <div class="ni admin-ni" id="tab-ni-t0" data-target="t0">👑 Advanced Dashboard</div>
+      <div class="ni active manager-ni" id="tab-ni-t1" data-target="t1">📊 Revenue Sheet</div>
+      <div class="ni" id="tab-ni-t2" data-target="t2">📋 Daily Ops Core</div>
+      <div class="ni" id="tab-ni-t3" data-target="t3">☎️ Confirm Tracking</div>
+      <div class="ni" id="tab-ni-t4" data-target="t4">👨‍⚕️ Doctor Finance</div>
+      <div class="ni admin-ni" id="tab-ni-t5" data-target="t5">⚙️ Custom Settings</div>
+      <div style="margin-top:40px;border-top:1px solid #2d3139;padding-top:10px;">
+        <div class="ni" id="sysLogoutBtn" style="color:#f8d7da;">🔙 ออกจากระบบ</div>
+      </div>
+    </nav>
+  </div>
+
+  <div class="main">
+
+    <div id="t0" class="tp">
+      <div class="ph no-print">
+        <div class="ptitle">👑 Master Dashboard <span style="font-size:12px;color:var(--tx3);font-weight:400;margin-left:10px;">วิเคราะห์ภาพรวมคลินิกรายเดือน</span></div>
+        <div class="ha">
+          <button class="btn bpng" id="btn-exp-t0">📸 Export PNG</button>
+          <input type="month" id="d0-mo">
+        </div>
+      </div>
+      <div class="pc" id="t0-cap">
+        <div style="background:#fff; padding:20px; border-radius:8px; border:1px solid var(--bdr); margin-bottom:20px;">
+          <h3 style="margin-bottom:15px; font-size:15px; border-bottom:2px solid var(--acc); padding-bottom:5px;">🌟 ตารางภาพรวมสถิติและเป้าหมายรายสาขา</h3>
+          <table class="gt-table">
+            <thead>
+              <tr><th>ชื่อสาขา</th><th>ยอดขายปัจจุบัน</th><th>เป้าหมายประจำเดือน</th><th>% ความสำเร็จ</th><th>ยอดเงินที่ขาดอีก</th></tr>
+            </thead>
+            <tbody id="gt-tbody"></tbody>
+          </table>
+        </div>
+        <div class="kgrid">
+          <div class="kc"><div class="klbl">รายได้รวมทุกสาขา (Total Rev)</div><div class="kval" style="color:var(--grn);" id="k0-rev">฿0</div></div>
+          <div class="kc"><div class="klbl">เป้ารวมทุกสาขา (Total Target)</div><div class="kval" id="k0-tg">฿0</div></div>
+          <div class="kc"><div class="klbl">คนไข้เข้าใช้บริการรวม (Pax)</div><div class="kval" style="color:var(--acc);" id="k0-pax">0 คน</div></div>
+          <div class="kc"><div class="klbl">ค่า DF แพทย์รวมทั้งหมด</div><div class="kval" style="color:var(--amb);" id="k0-df">฿0</div></div>
+        </div>
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px; margin-bottom:20px;">
+          <div class="chart-box" style="position:relative; height:280px;"><canvas id="c0-bar"></canvas></div>
+          <div class="chart-box" style="position:relative; height:280px;"><canvas id="c0-funnel"></canvas></div>
+        </div>
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px;">
+          <div class="chart-box" style="position:relative; height:250px;"><canvas id="c0-pie"></canvas></div>
+          <div class="chart-box" style="position:relative; height:250px;"><canvas id="c0-doc"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="t1" class="tp">
+      <div class="ph no-print">
+        <div class="ptitle">📊 Revenue Sheet</div>
+        <div class="ha">
+          <button class="btn bgsync" id="btn-gsync-t1">🚀 Generate to Google Sheet</button>
+          <button class="btn bpng" id="btn-exp-t1">📸 Export PNG</button>
+          <button class="btn bg2" id="downloadTemplateBtn">📄 โหลดฟอร์ม Import</button>
+          <input type="file" id="ex-file" style="display:none;">
+          <button class="btn bs" id="btn-trigger-import">📥 Import</button>
+          <button class="btn bg2" id="btn-export-t1">📤 Export Excel</button>
+          <select id="r-br"></select>
+          <input type="month" id="r-mo">
+        </div>
+      </div>
+      <div class="pc" id="t1-cap">
+        <div class="br-dash-zone no-print" style="background:#fff; border:1px solid var(--bdr); border-radius:8px; padding:20px; margin-bottom:25px;">
+          <div class="kgrid" style="margin-bottom:20px;">
+            <div class="kc" style="border-left:4px solid var(--grn);"><div class="klbl">ยอดขายปัจจุบัน</div><div class="kval" style="color:var(--grn);" id="k1-rev-val">฿0</div></div>
+            <div class="kc" style="border-left:4px solid var(--tx2);"><div class="klbl">เป้าหมายสาขา</div><div class="kval" id="k1-tg-val" data-val="0">฿0</div></div>
+            <div class="kc" style="border-left:4px solid var(--acc);"><div class="klbl">% ความสำเร็จ</div><div class="kval" style="color:var(--acc);" id="k1-pct-val">0%</div></div>
+            <div class="kc" style="border-left:4px solid var(--red);"><div class="klbl" style="color:var(--red);">ยอดที่ขาดอีก 🔥</div><div class="kval" style="color:var(--red);" id="k1-rem-val">฿0</div></div>
+          </div>
+          <div style="display:grid; grid-template-columns:2fr 1fr; gap:20px;">
+            <div class="chart-box" style="position:relative; height:180px;"><canvas id="c1-trend"></canvas></div>
+            <div class="chart-box" style="position:relative; height:180px;"><canvas id="c1-br-donut"></canvas></div>
+          </div>
+        </div>
+        <div class="rev-wrap">
+          <div class="rev-table-container">
+            <table class="rev-tbl" id="revTable">
+              <thead>
+                <tr>
+                  <th rowspan="2" class="bg-date">วันที่</th><th rowspan="2" class="bg-total">รายได้รวม</th>
+                  <th rowspan="2" class="bg-op">หัตถการ</th><th rowspan="2" class="bg-med">ขายยา</th><th rowspan="2" class="bg-treat">Treatment</th>
+                  <th rowspan="2" class="bg-hd">HD MALL</th><th rowspan="2" class="bg-gw">Gowabi</th><th rowspan="2" class="bg-chg">ชาร์จ 3%</th>
+                  <th rowspan="2" class="bg-drp">ฉีดผิว</th><th rowspan="2" class="bg-mem">member</th><th rowspan="2" class="bg-op">หัตถการ พนง.</th>
+                  <th rowspan="2" class="bg-chg">มัดจำเงิน</th><th rowspan="2" class="bg-total">รวมรายได้อื่นๆ</th>
+                  <th colspan="2" class="bg-old">คนไข้เก่า</th><th colspan="3" class="bg-new">คนไข้ใหม่</th>
+                  <th rowspan="2" class="bg-sum">คนไข้รวม</th><th rowspan="2" class="bg-date">แพทย์</th>
+                </tr>
+                <tr>
+                  <th class="bg-old">จำนวน (คน)</th><th class="bg-old">ยอด (บาท)</th>
+                  <th class="bg-new">มียอด (คน)</th><th class="bg-new">ยอด (บาท)</th><th class="bg-new">ไม่มียอด (คน)</th>
+                </tr>
+              </thead>
+              <tbody id="r-tbody"></tbody>
+            </table>
+          </div>
+          <div class="rev-sum-grid">
+            <div class="rev-sum-left">
+              <div class="rs-row"><span class="rs-lbl">ยอดปัจจุบัน 🔥</span><span class="rs-val fire" id="rs-curr">0</span></div>
+              <div class="rs-row"><span class="rs-lbl">% ความสำเร็จ 🚀</span><span class="rs-val fire" id="rs-pct">0%</span></div>
+              <div class="rs-row"><span class="rs-lbl">คงเหลือ 📉</span><span class="rs-val" id="rs-rem">0</span></div>
+              <div class="rs-row"><span class="rs-lbl">เหลืออีก (วัน) ⏳</span><span class="rs-val" id="rs-days">0</span></div>
+            </div>
+            <div class="rev-sum-right">
+              <div><div class="rs-row"><span class="rs-lbl">จำนวนคนไข้ (สะสม)</span><span class="rs-val" id="rs-pax">0</span></div><div class="rs-row"><span class="rs-lbl">คนไข้เก่า</span><span class="rs-val" id="rs-old">0</span></div><div class="rs-row"><span class="rs-lbl">คนไข้ใหม่ (รวม)</span><span class="rs-val" id="rs-new">0</span></div></div>
+              <div><div class="rs-row"><span class="rs-lbl">ยอดจ่ายเฉลี่ย (เก่า)</span><span class="rs-val" id="rs-avg-old">0</span></div><div class="rs-row"><span class="rs-lbl">ยอดจ่ายเฉลี่ย (ใหม่)</span><span class="rs-val" id="rs-avg-new">0</span></div></div>
+              <div><div class="rs-row"><span class="rs-lbl">รวมหัตถการ</span><span class="rs-val" id="rs-sop">0</span></div><div class="rs-row"><span class="rs-lbl">รวมขายยา</span><span class="rs-val" id="rs-smed">0</span></div><div class="rs-row"><span class="rs-lbl">รวม Treatment</span><span class="rs-val" id="rs-strt">0</span></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="t2" class="tp">
+      <div class="ph no-print">
+        <div class="ptitle">📋 Daily Ops Core</div>
+        <div class="ha">
+          <button class="btn bgsync" id="btn-gsync-t2">⬇️ ดึงจาก Revenue Sheet</button>
+          <button class="btn bpng" id="btn-exp-t2">📸 Export PNG</button>
+          <button class="btn bg2" id="btn-print-t2">🖨️ Print</button>
+          <button class="btn bp" id="btn-save-t2">💾 บันทึก</button>
+        </div>
+      </div>
+      <div class="pc" id="t2-content">
+        <div class="a4-doc" id="t2-export-area">
+
+          <!-- HEADER -->
+          <div class="a4d-header">
+            <span class="a4d-brand">LALIZA CLINIC</span>
+            <span class="a4d-title">ใบสรุปยอดแคชเชียร์และบัตรเครดิต</span>
+            <span class="a4d-update">Update 2026</span>
+          </div>
+
+          <!-- META -->
+          <div class="a4d-meta">
+            <div class="a4d-mc">
+              <div class="a4d-ml">สาขา</div>
+              <select id="o-br" class="a4d-sel a4d-sel-br"></select>
+            </div>
+            <div class="a4d-mc">
+              <div class="a4d-ml">ประจำวันที่</div>
+              <input type="date" id="o-dt" class="a4d-inp a4d-inp-dt">
+            </div>
+            <div class="a4d-mc">
+              <div class="a4d-ml">แพทย์</div>
+              <select id="o-doc" class="a4d-sel a4d-sel-doc"></select>
+              <select id="o-doc2" class="a4d-sel a4d-sel-doc" style="margin-top:3px;"></select>
+            </div>
+          </div>
+
+          <!-- 3-COLUMN BODY -->
+          <div class="a4d-body">
+
+            <!-- LEFT: Program table (column order: ยอดหน้าร้าน | Program | ยอดหักบัตร | จำนวนเงิน) -->
+            <div class="a4d-left">
+              <table class="a4d-tbl">
+                <thead>
+                  <tr>
+                    <th style="width:22%;">ยอดหน้าร้าน</th>
+                    <th class="tl" style="width:34%;">Program</th>
+                    <th style="width:22%;">จำนวนเงิน</th>
+                    <th style="width:22%;">ยอดหักบัตร<br>(VIP+VOUCHER)</th>
+                  </tr>
+                </thead>
+                <tbody id="o-tbody"></tbody>
+              </table>
+            </div>
+
+            <!-- CENTER: คะแนน (Point) -->
+            <div class="a4d-center">
+              <div class="a4d-center-lbl">คะแนน<br>(Point)</div>
+              <div class="a4d-center-icon">⭐</div>
+              <input type="text" id="t-point" class="a4d-center-inp ops-node-inp">
+              <div class="a4d-center-sub">คะแนน</div>
+            </div>
+
+            <!-- RIGHT: เครดิต + แอป + เงินสด + ยอดรวม -->
+            <div>
+              <table class="a4d-tbl">
+                <thead>
+                  <tr>
+                    <th class="tl">รายการรับชำระเงิน</th>
+                    <th style="width:38%;">จำนวนเงิน</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr><td colspan="2" class="a4d-sec-hd">1. เครดิต / บัตร</td></tr>
+                  <tr><td class="tl2">1.1 Credit (เครดิต)</td><td class="ti"><input type="text" id="cr-credit" class="ops-node-inp c-val"></td></tr>
+                  <tr><td class="tl2">1.2 กสิกร (สแกน/โอน)</td><td class="ti"><input type="text" id="cr-kbank-scan" class="ops-node-inp c-val"></td></tr>
+                  <tr><td class="tl2">2. KTC (กรุงไทย)</td><td class="ti"><input type="text" id="cr-ktc" class="ops-node-inp c-val"></td></tr>
+                  <tr><td class="tl2">3. BAY (กรุงศรี)</td><td class="ti"><input type="text" id="cr-bay" class="ops-node-inp c-val"></td></tr>
+                  <tr><td class="tl2">4. SCB (ไทยพาณิชย์)</td><td class="ti"><input type="text" id="cr-scb" class="ops-node-inp c-val"></td></tr>
+                  <tr><td class="tl2">5. TTB</td><td class="ti"><input type="text" id="cr-ttb" class="ops-node-inp c-val"></td></tr>
+                  <tr><td class="tl2">6. Bangkok Bank</td><td class="ti"><input type="text" id="cr-bbl" class="ops-node-inp c-val"></td></tr>
+                  <tr><td class="tl2 a4d-muted">อื่นๆ ระบุ</td><td class="ti"><input type="text" id="cr-other" class="ops-node-inp c-val"></td></tr>
+                  <tr class="a4d-sub"><td class="tl2">ยอดรวมเครดิต</td><td class="tc" id="t-crd-sum">0</td></tr>
+
+                  <tr><td colspan="2" class="a4d-sec-hd">2. แอปพลิเคชัน</td></tr>
+                  <tr>
+                    <td class="tl2">
+                      HDmall
+                      <span style="font-size:11px;color:#888;margin-left:4px;">(จำนวน:</span>
+                      <input type="text" id="a-hd-pax" class="app-pax-inp" placeholder="0">
+                      <span style="font-size:11px;color:#888;">คน)</span>
+                    </td>
+                    <td class="ti"><input type="text" id="a-hdmall" class="ops-node-inp c-val"></td>
+                  </tr>
+                  <tr>
+                    <td class="tl2">
+                      Gowabi
+                      <span style="font-size:11px;color:#888;margin-left:4px;">(จำนวน:</span>
+                      <input type="text" id="a-gw-pax" class="app-pax-inp" placeholder="0">
+                      <span style="font-size:11px;color:#888;">คน)</span>
+                    </td>
+                    <td class="ti"><input type="text" id="a-gowabi" class="ops-node-inp c-val"></td>
+                  </tr>
+
+                  <tr><td colspan="2" class="a4d-sec-hd">3. เงินสด / โอน</td></tr>
+                  <tr><td class="tl2">เงินสด</td><td class="ti"><input type="text" id="pay-cash" class="ops-node-inp"></td></tr>
+                  <tr><td class="tl2">ยอดเงินโอน</td><td class="ti"><input type="text" id="pay-trans" class="ops-node-inp"></td></tr>
+
+                  <!-- ยอดชำระรวม อยู่ล่างสุดฝั่งขวา -->
+                  <tr>
+                    <td colspan="2" class="a4d-grand-cell">
+                      <div class="a4d-grand-lbl">💰 ยอดชำระรวม</div>
+                      <div class="a4d-grand-val" id="t-grand-disp">0</div>
+                      <input type="hidden" id="t-grand" value="0">
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- BILL FOOTER -->
+          <div class="a4d-bill-row">
+            <div class="a4d-bill-line">
+              <span class="a4d-bl">เลขที่บิลเริ่ม</span>
+              <input type="text" id="o-bs" class="a4d-bi">
+              <span class="a4d-bl">ถึง</span>
+              <input type="text" id="o-be" class="a4d-bi">
+              <span class="a4d-bl">รวมบิลที่ใช้</span>
+              <input type="text" id="o-bc" class="a4d-bi" style="width:70px;">
+              <span class="a4d-bl">บิล</span>
+            </div>
+            <div class="a4d-bill-line">
+              <span class="a4d-bl">ยอดเงินขาด</span>
+              <input type="text" id="o-sh" class="a4d-bi red">
+              <span class="a4d-bl">ยอดเงินเกิน</span>
+              <input type="text" id="o-ov" class="a4d-bi">
+              <span class="a4d-bl">สาเหตุ</span>
+              <input type="text" id="o-rsn" class="a4d-bi wide" style="flex:1;width:auto;">
+            </div>
+          </div>
+
+          <!-- NOTE -->
+          <div class="a4d-note-row">
+            <span class="a4d-bl">หมายเหตุ:</span>
+            <input type="text" id="o-note" style="flex:1;border:none;border-bottom:1px dotted #bbb;background:transparent;font-size:13px;font-family:'Sarabun',sans-serif;padding:2px 4px;">
+          </div>
+
+          <!-- 2-BOX SIGNATURE -->
+          <div class="a4d-sig2">
+            <div class="a4d-sigbox">
+              <div class="a4d-sig-title">ลงชื่อ (แคชเชียร์)</div>
+              <select id="o-ca" class="a4d-sel" style="font-size:14px;font-weight:700;border-bottom:1px dotted #bbb;width:100%;"></select>
+              <div class="a4d-sig-line2"></div>
+              <div class="a4d-sig-paren">(............................................)</div>
+              <div class="a4d-sig-date">วันที่ ......... / ......... / ...........</div>
+            </div>
+            <div class="a4d-sigbox">
+              <div class="a4d-sig-title">ลงชื่อ (ผู้จัดการ)</div>
+              <select id="o-mg" class="a4d-sel" style="font-size:14px;font-weight:700;border-bottom:1px dotted #bbb;width:100%;"></select>
+              <div class="a4d-sig-line2"></div>
+              <div class="a4d-sig-paren">(............................................)</div>
+              <div class="a4d-sig-date">วันที่ ......... / ......... / ...........</div>
+            </div>
+          </div>
+
+          <div class="a4d-stamp">Laliza Clinic · Daily Operations Portal · บันทึกอัตโนมัติ · ห้ามแก้ไขโดยไม่ได้รับอนุญาต</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="t3" class="tp">
+      <div class="ph no-print">
+        <div class="ptitle">☎️ Confirm Tracking</div>
+        <div class="ha">
+          <button class="btn bgsync" id="btn-gsync-t3">🚀 Generate to Google Sheet</button>
+          <button class="btn bpng" id="btn-exp-t3">📸 Export PNG</button>
+          <select id="tk-br"></select>
+          <input type="month" id="tk-mo">
+        </div>
+      </div>
+      <div class="pc" id="t3-cap">
+        <div style="display:grid; grid-template-columns:1fr 2fr; gap:20px; margin-bottom:20px;">
+          <div class="chart-box" style="position:relative; height:200px;"><canvas id="c3-donut"></canvas></div>
+          <div class="kgrid" style="grid-template-columns:1fr 1fr; margin:0;">
+            <div class="kc"><div class="klbl">คอนเฟิร์ม-มา (รวม)</div><div class="kval" style="color:var(--grn);" id="k3-cf">0</div></div>
+            <div class="kc"><div class="klbl">มาจริง (รวม)</div><div class="kval" style="color:var(--acc);" id="k3-act">0</div></div>
+            <div class="kc"><div class="klbl">ขอเลื่อน</div><div class="kval" style="color:var(--amb);" id="k3-pp">0</div></div>
+            <div class="kc"><div class="klbl">ไม่รับสาย/ปิดเครื่อง</div><div class="kval" style="color:var(--red);" id="k3-na">0</div></div>
+          </div>
+        </div>
+        <table class="gt-table" style="font-size:12px;">
+          <thead>
+            <tr><th rowspan="2">วันที่</th><th colspan="2">คอนเฟิร์ม-มา</th><th colspan="2">ขอเลื่อน</th><th colspan="2">Walk-in</th><th rowspan="2">ไม่รับสาย</th><th rowspan="2">โทร CF ทั้งหมด</th><th colspan="3">มาจริง</th></tr>
+            <tr><th>เก่า</th><th>ใหม่</th><th>เก่า</th><th>ใหม่</th><th>เก่า</th><th>ใหม่</th><th>เก่า</th><th>ใหม่</th><th>รวม</th></tr>
+          </thead>
+          <tbody id="tk-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div id="t4" class="tp">
+      <div class="ph no-print">
+        <div class="ptitle">👨‍⚕️ Doctor Finance</div>
+        <div class="ha">
+          <button class="btn bgsync" id="btn-gsync-t4">🚀 Generate to Google Sheet</button>
+          <button class="btn bpng" id="btn-exp-t4">📸 Export PNG</button>
+          <select id="df-br"></select>
+          <input type="month" id="df-mo">
+        </div>
+      </div>
+      <div class="pc" id="t4-cap">
+        <div style="display:grid; grid-template-columns:1fr 2fr; gap:20px; margin-bottom:20px;">
+          <div>
+            <div class="kc" style="margin-bottom:10px;"><div class="klbl">ยอดขายแพทย์รวมเดือนนี้</div><div class="kval" style="color:var(--acc);" id="k4-sal">฿0</div></div>
+            <div class="kc"><div class="klbl">ค่า DF รวม</div><div class="kval" style="color:var(--amb);" id="k4-df">฿0</div></div>
+          </div>
+          <div class="chart-box" style="position:relative; height:180px;"><canvas id="c4-bar"></canvas></div>
+        </div>
+        <table class="gt-table" style="font-size:12px;">
+          <thead>
+            <tr><th>วันที่</th><th>แพทย์</th><th>เวลาเข้างาน</th><th>เวลาออกงาน</th><th>ยอดขาย</th><th>ค่า DF</th><th>หมายเหตุ</th></tr>
+          </thead>
+          <tbody id="df-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div id="t5" class="tp">
+      <div class="ph no-print"><div class="ptitle">⚙️ Custom Settings</div><button class="btn bs" id="btn-save-t5">💾 บันทึกการตั้งค่า</button></div>
+      <div class="pc" style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+        <div style="background:#fff;padding:20px;border:1px solid var(--bdr);border-radius:8px;"><h3 style="margin-bottom:15px;border-bottom:2px solid var(--acc);padding-bottom:5px;">เป้าหมายรายเดือน (Target)</h3><div id="s-tg"></div></div>
+        <div style="background:#fff;padding:20px;border:1px solid var(--bdr);border-radius:8px;">
+          <h3 style="margin-bottom:15px;border-bottom:2px solid var(--acc);padding-bottom:5px;">รายชื่อพนักงาน / แพทย์</h3>
+          <div style="margin-bottom:10px;"><div style="font-size:12px;color:var(--tx2);margin-bottom:3px;">แพทย์ (คั่นด้วย ,)</div><textarea id="s-dr" rows="2" style="width:100%;"></textarea></div>
+          <div style="margin-bottom:10px;"><div style="font-size:12px;color:var(--tx2);margin-bottom:3px;">แคชเชียร์ (คั่นด้วย ,)</div><textarea id="s-ca" rows="2" style="width:100%;"></textarea></div>
+          <div><div style="font-size:12px;color:var(--tx2);margin-bottom:3px;">ผู้จัดการ (คั่นด้วย ,)</div><textarea id="s-mg" rows="2" style="width:100%;"></textarea></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ==========================================
+// STEP 2: GLOBAL ENVIRONMENT HELPER DEFINITIONS (First Node Execution)
+// ==========================================
+const g = (id) => document.getElementById(id);
+const qs = (s) => document.querySelector(s);
+const qsa = (s) => document.querySelectorAll(s);
+
+// STEP 3: FIREBASE SECURE MATRIX CONNECTIVITY
+const firebaseConfig = {
+  apiKey: "AIzaSyC0P1LGtglA_t1Nc5PyM5uD3MOLnfBZwFM",
+  authDomain: "lalizaclinic-work-schedule.firebaseapp.com",
+  databaseURL: "https://lalizaclinic-work-schedule-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "lalizaclinic-work-schedule",
+  storageBucket: "lalizaclinic-work-schedule.firebasestorage.app",
+  messagingSenderId: "1052920426382",
+  appId: "1:1052920426382:web:e07f91f2e56d0fc7497edf",
+  measurementId: "G-1HHWXV0FW7"
+};
+
+if (!firebase.apps.length) {
+  firebase.initializeApp(firebaseConfig);
+}
+const db = firebase.database();
+const fstore = firebase.firestore();
+
+// Security Matrix Credentials Matching
+const USERS = {
+  "16698": { role: "admin", br: "all", label: "Admin สูงสุด | ทุกสาขา" },
+  "64752": { role: "cashier", br: "rama9", label: "Cashier | พระราม 9" },
+  "92165": { role: "cashier", br: "pinklao", label: "Cashier | ปิ่นเกล้า" },
+  "29817": { role: "cashier", br: "bangkae", label: "Cashier | บางแค" },
+  "56034": { role: "cashier", br: "rangsit", label: "Cashier | รังสิต" },
+  "71483": { role: "cashier", br: "promanat", label: "Cashier | พรอมานาด" },
+  "38926": { role: "cashier", br: "ngamwongwan", label: "Cashier | งามวงศ์วาน" },
+  "47291": { role: "cashier", br: "srinakarin", label: "Cashier | ศรีนครินทร์" },
+  "83640": { role: "cashier", br: "westgate", label: "Cashier | เวสต์เกต" },
+  "847291": { role: "manager", br: "rama9", label: "Manager | พระราม 9" },
+  "362058": { role: "manager", br: "pinklao", label: "Manager | ปิ่นเกล้า" },
+  "519374": { role: "manager", br: "bangkae", label: "Manager | บางแค" },
+  "728163": { role: "manager", br: "rangsit", label: "Manager | รังสิต" },
+  "945612": { role: "manager", br: "promanat", label: "Manager | พรอมานาด" },
+  "183749": { role: "manager", br: "ngamwongwan", label: "Manager | งามวงศ์วาน" },
+  "637482": { role: "manager", br: "srinakarin", label: "Manager | ศรีนครินทร์" },
+  "291856": { role: "manager", br: "westgate", label: "Manager | เวสต์เกต" }
+};
+const BKS = {rama9:"พระราม 9", pinklao:"ปิ่นเกล้า", bangkae:"บางแค", rangsit:"รังสิต", promanat:"พรอมานาด", ngamwongwan:"งามวงศ์วาน", srinakarin:"ศรีนครินทร์", westgate:"เวสต์เกต"};
+const bKeys = Object.keys(BKS);
+let SETTINGS = {
+  progs: ["Co2","Pico","Vbeam","Elos","Botox","Filler","Meso","Thermage","Ulthera","Treatment","Drip Vitamin (Nures)","Product","หัตถการอื่นๆ"],
+  tgs: {rama9:1000000, pinklao:1000000, bangkae:1000000, rangsit:1000000, promanat:1000000, ngamwongwan:1000000, srinakarin:1000000, westgate:1000000},
+  docs: ["หมอ A"], cas: ["แคชเชียร์ A"], mgs: ["ผู้จัดการ A"]
+};
+const R_COLS = [
+  {id:"r-op", cls:"bg-op"}, {id:"r-med", cls:"bg-med"}, {id:"r-trt", cls:"bg-treat"},
+  {id:"r-hd", cls:"bg-hd"}, {id:"r-gw", cls:"bg-gw"}, {id:"r-chg", cls:"bg-chg"},
+  {id:"r-drp", cls:"bg-drp"}, {id:"r-mem", cls:"bg-mem"}, {id:"r-stf", cls:"bg-op"},
+  {id:"r-dep", cls:"bg-chg"}, {id:"r-oth", cls:"bg-total"}, {id:"r-opx", cls:"bg-old"},
+  {id:"r-oam", cls:"bg-old"}, {id:"r-nyp", cls:"bg-new"}, {id:"r-nam", cls:"bg-new"}, {id:"r-nnp", cls:"bg-new"}
+];
+const O_CREDITS = [
+  {n:"1. KBANK (กสิกร)", id:"c-kbank"}, {n:"1.1 Credit (เครดิต)", id:"c-crd"}, {n:"1.2 กสิกร(สแกน/โอน)", id:"c-kbsc"},
+  {n:"2.KTC (กรุงไทย)", id:"c-ktc"}, {n:"3.BAY (กรุงศรี)", id:"c-bay"}, {n:"14. SCB (ไทยพาณิชย์)", id:"c-scb"},
+  {n:"อื่นๆ ระบุ <input type='text' id='c-oth-n' style='border:none;border-bottom:1px dotted #ced4da;width:40px;background:transparent;'>", id:"c-oth"},
+  {n:"ยอดรวมเครดิต", id:"t-crd", ro:true}
+];
+
+let CURRENT_USER = null;
+let curT1 = "", curT3 = "", curT4 = "";
+let t1Listener = null;
+const tm1 = {}, tm3 = {}, tm4 = {};
+
+let c0Bar, c0Pie, c0Funnel, c0Doc, c0Track1, c0Track2, c0D1, c0D2;
+let c1Trend, c1BrDonut, c3Donut, c4Bar;
+
+// STEP 4: DOM REGISTRATION PLATFORM INITIALIZER
+window.addEventListener('DOMContentLoaded', bootstrapApp);
+
+async function bootstrapApp() {
+  try {
+    initEvents();
+    injectBranchOptions();
+    await restoreSession();
+    console.log('APP READY');
+  } catch (err) {
+    console.error("Critical Runtime Block Exception:", err);
+  }
+}
+
+// STEP 6: REGISTER ALL CENTRALIZED EVENT EVENTLISTENERS (No Inline Attributes Left)
+function initEvents() {
+  g('loginBtn')?.addEventListener('click', checkLogin);
+  g('login-pass')?.addEventListener('keydown', (e) => { if (e.key === 'Enter') checkLogin(); });
+  g('sysLogoutBtn')?.addEventListener('click', handleLogout);
+
+  qsa('.nav .ni:not(#sysLogoutBtn)').forEach(btn => {
+    btn.addEventListener('click', (e) => { sw(e.currentTarget.dataset.target, e.currentTarget); });
+  });
+
+  g('downloadTemplateBtn')?.addEventListener('click', downloadImportTemplate);
+  g('btn-trigger-import')?.addEventListener('click', () => g('ex-file').click());
+  g('ex-file')?.addEventListener('change', (e) => handleExcelImportUpload(e.target));
+  g('btn-export-t1')?.addEventListener('click', exportT1);
+  g('btn-save-t2')?.addEventListener('click', saveT2);
+  g('btn-save-t5')?.addEventListener('click', saveT5);
+
+  // Export PNG
+  g('btn-exp-t0')?.addEventListener('click', () => exportPng('t0-cap', 'Dashboard'));
+  g('btn-exp-t1')?.addEventListener('click', () => exportPng('t1-cap', 'RevenueSheet'));
+  g('btn-exp-t2')?.addEventListener('click', () => exportPng('t2-export-area', 'DailyOps'));
+  g('btn-exp-t3')?.addEventListener('click', () => exportPng('t3-cap', 'ConfirmTracking'));
+  g('btn-exp-t4')?.addEventListener('click', () => exportPng('t4-cap', 'DoctorFinance'));
+  // Auto-flow from Revenue Sheet
+  g('btn-gsync-t2')?.removeEventListener('click', ()=>{});
+
+  // Google Sheet links
+  g('btn-gsync-t1')?.addEventListener('click', () => openGSheet('t1'));
+  g('btn-gsync-t2')?.addEventListener('click', () => autoFlowT2());
+  g('btn-gsync-t3')?.addEventListener('click', () => openGSheet('t3'));
+  g('btn-gsync-t4')?.addEventListener('click', () => openGSheet('t4'));
+
+  g('r-br')?.addEventListener('change', buildT1); g('r-mo')?.addEventListener('change', buildT1);
+  g('o-br')?.addEventListener('change', () => { loadT2(); }); g('o-dt')?.addEventListener('change', () => { loadT2(); });
+  g('tk-br')?.addEventListener('change', buildT3); g('tk-mo')?.addEventListener('change', buildT3);
+  g('df-br')?.addEventListener('change', buildT4); g('df-mo')?.addEventListener('change', buildT4);
+  g('d0-mo')?.addEventListener('change', buildT0);
+}
+
+// STEP 5: ROBUST CONTROLLED ACCESS GATEWAY MANAGER
+async function checkLogin() {
+  try {
+    const el = g('login-pass'); if (!el) return;
+    const pass = el.value.trim(); if (!pass) { alert('กรุณากรอกรหัสผ่านเพื่อเข้าทำงาน'); return; }
+    if (!USERS[pass]) { alert('รหัสพนักงานไม่ถูกต้องในระบบ'); return; }
+    const userProfile = USERS[pass];
+    sessionStorage.setItem('lalizaUser', JSON.stringify(userProfile));
+    enterApp(userProfile);
+  } catch (err) { console.error(err); alert(err.message); }
+}
+
+// STEP 7: RESILIENT REFRESH-PROOF PERSISTENCE
+async function restoreSession() {
+  const raw = sessionStorage.getItem('lalizaUser');
+  if (raw) { enterApp(JSON.parse(raw)); }
+}
+
+function enterApp(userProfile) {
+  CURRENT_USER = userProfile;
+  g("login-screen").classList.add('hidden');
+  g("main-app").style.setProperty('display', 'flex', 'important');
+  g("nav-user-label").textContent = `[${CURRENT_USER.label}]`;
+
+  if (CURRENT_USER.role === "admin") {
+    document.querySelectorAll('.admin-ni').forEach(el => el.style.setProperty('display', 'flex', 'important'));
+    document.querySelectorAll('.manager-ni').forEach(el => el.style.setProperty('display', 'flex', 'important'));
+  } else if (CURRENT_USER.role === "manager") {
+    document.querySelectorAll('.admin-ni').forEach(el => el.style.setProperty('display', 'none', 'important'));
+    document.querySelectorAll('.manager-ni').forEach(el => el.style.setProperty('display', 'flex', 'important'));
+    ['r-br', 'o-br', 'tk-br', 'df-br'].forEach(id => {
+      let el = g(id); if (el) { el.value = CURRENT_USER.br; el.disabled = true; }
+    });
+  } else {
+    document.querySelectorAll('.admin-ni').forEach(el => el.style.setProperty('display', 'none', 'important'));
+    document.querySelectorAll('.manager-ni').forEach(el => el.style.setProperty('display', 'none', 'important'));
+    ['r-br', 'o-br', 'tk-br', 'df-br'].forEach(id => {
+      let el = g(id); if (el) { el.value = CURRENT_USER.br; el.disabled = true; }
+    });
+  }
+
+  // โหลด SETTINGS + dropdown ก่อน แล้วค่อย build หน้าแรก
+  loadInitialData().then(() => {
+    // updateSelects เสร็จแล้ว ค่อย build
+    curT1 = ""; curT3 = "";
+    // แสดงหน้า t1 โดยไม่ผ่าน sw() เพื่อหลีกเลี่ยง cache check
+    document.querySelectorAll(".tp").forEach(p => p.style.setProperty('display','none','important'));
+    const t1 = g('t1'); if(t1) t1.style.setProperty('display','block','important');
+    document.querySelectorAll(".ni").forEach(n => n.classList.remove("active"));
+    const tab = g('tab-ni-t1'); if(tab) tab.classList.add("active");
+    buildT1();
+  });
+}
+
+// STEP 8: BACKGROUND CONTEXT BOOTSTRAP INITIAL PRELOADER
+// branch password → ops branch key
+const BR_PWD_MAP = {
+  '847291':'rama9','362058':'pinklao','357394':'bangkae',
+  '728163':'rangsit','945612':'promanat','183749':'ngamwongwan',
+  '637482':'srinakarin','291856':'westgate'
+};
+
+async function loadInitialData() {
+  const today = new Date().toISOString().split('T')[0];
+  if (g("o-dt")) g("o-dt").value = today;
+  ["d0-mo", "r-mo", "tk-mo", "df-mo"].forEach(id => { if (g(id)) g(id).value = today.slice(0, 7); });
+
+  // ลอง load จาก sessionStorage ก่อน (fast path)
+  const cached = sessionStorage.getItem('lalizaSettings');
+  if (cached) {
+    try {
+      const c = JSON.parse(cached);
+      if (c.docs?.length) SETTINGS.docs = c.docs;
+      if (c.cas?.length)  SETTINGS.cas  = c.cas;
+      if (c.mgs?.length)  SETTINGS.mgs  = c.mgs;
+      if (c.tgs)          SETTINGS.tgs  = c.tgs;
+      updateSelects();
+      // refresh ใน background
+      _refreshSettings();
+      return;
+    } catch(e) { sessionStorage.removeItem('lalizaSettings'); }
+  }
+
+  // ไม่มี cache — โหลดแบบ parallel ทุกแหล่งพร้อมกัน
+  await _refreshSettings();
+}
+
+async function _refreshSettings() {
+  try {
+    // รันพร้อมกันทั้ง 3 แหล่ง
+    const [snapSettings, snapBranches, fsDocsSnap] = await Promise.all([
+      db.ref('ops_system_settings').once('value'),
+      db.ref('branches').once('value'),
+      fstore.collection('doctors').get()
+    ]);
+
+    if (snapSettings.exists()) {
+      const d = snapSettings.val();
+      SETTINGS.tgs = d.tgs || SETTINGS.tgs;
+      if (d.docs?.length) SETTINGS.docs = d.docs;
+      if (d.cas?.length)  SETTINGS.cas  = d.cas;
+      if (d.mgs?.length)  SETTINGS.mgs  = d.mgs;
+    }
+
+    // ดึงแพทย์จาก Firestore เฉพาะถ้า settings ไม่มี
+    if (!SETTINGS.docs.length) {
+      const docs = [];
+      fsDocsSnap.forEach(doc => {
+        const v = doc.data();
+        if (v?.name && v.name !== 'Admin Doctor' && !doc.id.includes('test') && v.status !== 'inactive')
+          docs.push(v.name);
+      });
+      if (docs.length) SETTINGS.docs = docs;
+    }
+
+    // cashier/manager จาก branches
+    if (snapBranches.exists() && !SETTINGS.cas.length) {
+      const casSet = new Set(), mgsSet = new Set();
+      snapBranches.forEach(brSnap => {
+        const bdata = brSnap.val();
+        if (!BR_PWD_MAP[bdata.password||'']) return;
+        (bdata.emps||[]).forEach(e => {
+          if (!e.name) return;
+          const pos = e.pos||'';
+          if (pos.includes('แคชเชียร์')||pos.toLowerCase().includes('cashier')) casSet.add(e.name);
+          if (pos.includes('ผู้จัดการ')||pos.includes('ผจก.')||pos.toLowerCase().includes('manager')) mgsSet.add(e.name);
+        });
+      });
+      if (casSet.size) SETTINGS.cas = [...casSet];
+      if (mgsSet.size) SETTINGS.mgs = [...mgsSet];
+    }
+
+    // บันทึกลง sessionStorage สำหรับ login ครั้งหน้า
+    sessionStorage.setItem('lalizaSettings', JSON.stringify({
+      docs: SETTINGS.docs, cas: SETTINGS.cas,
+      mgs: SETTINGS.mgs,  tgs: SETTINGS.tgs
+    }));
+
+  } catch(err) {
+    console.warn('_refreshSettings error:', err);
+  }
+  updateSelects();
+}
+
+function handleLogout() { sessionStorage.removeItem('lalizaUser'); location.reload(); }
+function injectBranchOptions() { const opts = bKeys.map(k=>`<option value="${k}">${BKS[k]}</option>`).join(""); ["r-br","o-br","tk-br","df-br"].forEach(id=>{ const el = g(id); if(el) el.innerHTML=opts; }); }
+function num(id) { return Number((g(id)?.value || "").replace(/,/g, '')) || 0; }
+function setValue(id, val) { const el = g(id); if (!el) return; if (el.tagName === "INPUT" || el.tagName === "SELECT") { el.value = val.toLocaleString("th-TH"); } else { el.textContent = val.toLocaleString("th-TH"); } }
+function triggerGoogleSheetSync(pageKey) { toast(`🚀 [Google Sheets Automation Platform] เชื่อมต่อท่อส่งโมดูล [${pageKey.toUpperCase()}] สแตนด์บายแล้วครับบอส`, "success"); }
+function toast(m, type="success"){ const el=document.createElement("div"); el.className="toast"; el.style.background = type==="error" ? "#c92a2a" : "#212529"; el.textContent=m; document.body.appendChild(el); setTimeout(()=>el.remove(),4000); }
+function fm(n) { return Number(n).toLocaleString('th-TH'); }
+function fmI(n) { return Math.round(Number(n)).toLocaleString('th-TH'); }
+function formatInput(el) { if(el.value!=="") { let v = parseFloat(el.value.replace(/,/g,''))||0; el.value = fm(v); } }
+function unformatInput(el) { if(el.value!=="") el.value = el.value.replace(/,/g,''); }
+
+// STEP 13: STABLE TEMPLATE BUILDER ACCESSIBLE VIA DYNAMIC CLICK BINDING
+function downloadTemplate() {
+  const mo=g("r-mo").value; const [yr,m] = mo.split("-"); const dim = new Date(yr,m,0).getDate();
+  let data = [["วันที่", "หัตถการ", "ขายยา", "Treatment", "HD MALL", "Gowabi", "ชาร์จ 3%", "ฉีดผิว", "member", "หัตถการ พนง.", "มัดจำเงิน", "รวมรายได้อื่นๆ", "คนไข้เก่า (คน)", "คนไข้เก่า (ยอด)", "คนไข้ใหม่มี (คน)", "คนไข้ใหม่มียอด (บาท)", "คนไข้ใหม่ไม่มี (คน)", "แพทย์"]];
+  for(let i=1; i<=dim; i++) data.push([`${i}/${m}/${yr}`, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, ""]);
+  const ws = XLSX.utils.aoa_to_sheet(data); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Template"); XLSX.writeFile(wb, `Template_Import_${mo}.xlsx`);
+}
+function downloadImportTemplate() { downloadTemplate(); }
+
+function sw(id, item) {
+  document.querySelectorAll(".tp").forEach(p => p.style.setProperty('display', 'none', 'important'));
+  const target = g(id); if (target) target.style.setProperty('display', 'block', 'important');
+  document.querySelectorAll(".ni").forEach(n => n.classList.remove("active"));
+  if(item) item.classList.add("active");
+  // reset cache เพื่อให้โหลดข้อมูลใหม่ทุกครั้ง
+  if(id==='t1') { curT1=""; buildT1(); }
+  else if(id==='t0') buildT0();
+  else if(id==='t2') buildT2();
+  else if(id==='t3') { curT3=""; buildT3(); }
+  else if(id==='t4') buildT4();
+  else if(id==='t5') loadT5();
+}
+
+// ==========================================
+// TAB 0: MASTER ADVANCED DASHBOARD BOUNDED DATA RETRIEVAL (Fixes Blank Dashboard Screen)
+// ==========================================
+function buildT0() {
+  const mo = g("d0-mo").value; if(!mo) return;
+  
+  // FIX 2: Bounded exact month query payload index limits to prevent network crashes completely on public links
+  Promise.all([
+    db.ref('ops_daily').orderByKey().startAt(mo).endAt(mo + "\uf8ff").once('value'),
+    db.ref(`ops_tracking_mth/${mo}`).once('value'),
+    db.ref(`ops_docfin_mth/${mo}`).once('value')
+  ]).then(([snapDaily, snapTrack, snapDoc]) => {
+    
+    const allD = snapDaily.val()||{};
+    let bRev={}, bTg={}, totRev=0, totTg=0, totPax=0, tCash=0, tApp=0, tTrans=0, tCrd=0;
+    let tOp=0, tMed=0, tTrt=0, tCo2=0, tPico=0, tVb=0;
+    let tP_PP=0, tP_NA=0, tP_Old=0, tP_New=0;
+
+    bKeys.forEach(k => { bRev[k]=0; bTg[k] = SETTINGS.tgs[k]||0; totTg+=bTg[k]; });
+
+    for(let dt in allD) {
+      if(dt.startsWith(mo)) {
+        bKeys.forEach(br => {
+          if(allD[dt][br]) {
+            let d = allD[dt][br];
+            let rTot = (parseFloat(d["r-op"])||0)+(parseFloat(d["r-med"])||0)+(parseFloat(d["r-trt"])||0)+(parseFloat(d["r-hd"])||0)+(parseFloat(d["r-gw"])||0)+(parseFloat(d["r-chg"])||0)+(parseFloat(d["r-drp"])||0)+(parseFloat(d["r-mem"])||0)+(parseFloat(d["r-stf"])||0)+(parseFloat(d["r-dep"])||0)+(parseFloat(d["r-oth"])||0);
+            bRev[br] += rTot; totRev += rTot;
+            totPax += (parseFloat(d["r-opx"])||0)+(parseFloat(d["r-nyp"])||0)+(parseFloat(d["r-nnp"])||0);
+            
+            tCash += parseFloat(d["pay-cash"])||0;
+            tApp += (parseFloat(d["a-hdmall"])||0) + (parseFloat(d["a-gowabi"])||0);
+            tTrans += parseFloat(d["pay-trans"])||0;
+            tCrd += (parseFloat(d["c-kbank"])||0) + (parseFloat(d["c-crd"])||0) + (parseFloat(d["c-kbsc"])||0) + (parseFloat(d["c-ktc"])||0) + (parseFloat(d["c-bay"])||0) + (parseFloat(d["c-scb"])||0) + (parseFloat(d["c-oth"])||0);
+
+            tOp += parseFloat(d["r-op"])||0; tMed += parseFloat(d["r-med"])||0; tTrt += parseFloat(d["r-trt"])||0;
+            tCo2 += parseFloat(d["p0"])||0; tPico += parseFloat(d["p1"])||0; tVb += parseFloat(d["p2"])||0;
+          }
+        });
+      }
+    }
+    
+    let tkCall=0, tkConf=0, tkAct=0;
+    snapTrack.forEach(brSnap => {
+      brSnap.forEach(dtSnap => {
+        let tk = dtSnap.val()||{};
+        tkCall += parseFloat(tk["tk-tc"])||0;
+        tkConf += (parseFloat(tk["tk-co"])||0) + (parseFloat(tk["tk-cn"])||0);
+        tkAct += (parseFloat(tk["tk-ro"])||0) + (parseFloat(tk["tk-rn"])||0);
+        tP_PP += (parseFloat(tk["tk-po"])||0) + (parseFloat(tk["tk-pn"])||0);
+        tP_NA += parseFloat(tk["tk-na"])||0;
+        tP_Old += parseFloat(tk["tk-ro"])||0;
+        tP_New += parseFloat(tk["tk-rn"])||0;
+      });
+    });
+
+    let tDf = 0; let docStats = {};
+    snapDoc.forEach(brSnap => { 
+      brSnap.forEach(dtSnap => { 
+        let d = dtSnap.val()||{};
+        let df = parseFloat(d["df-df"])||0; let sl = parseFloat(d["df-sl"])||0; let doc = d["df-doc"];
+        tDf += df; if(doc && sl>0) docStats[doc] = (docStats[doc]||0) + sl;
+      }); 
+    });
+
+    let gtHtml = "";
+    bKeys.forEach(k => {
+      let current = bRev[k]; let target = bTg[k];
+      let pct = target > 0 ? ((current / target) * 100).toFixed(1) : "0";
+      let rem = target > current ? `฿${fm(target - current)}` : `<span style="color:var(--grn); font-weight:bold;">🏆 ทะลุเป้า!</span>`;
+      gtHtml += `<tr><td style="text-align:left; font-weight:700;">📍 ${BKS[k]}</td><td style="color:#1D4ED8; font-weight:700;">฿${fm(current)}</td><td>฿${fm(target)}</td><td style="color:var(--amb); font-weight:700;">${pct}%</td><td style="color:var(--red); font-weight:700;">${rem}</td></tr>`;
+    });
+    g("gt-tbody").innerHTML = gtHtml;
+
+    g("k0-rev").textContent = "฿"+fm(totRev); g("k0-tg").textContent = "฿"+fm(totTg);
+    g("k0-pax").textContent = fmI(totPax)+" คน"; g("k0-df").textContent = "฿"+fm(tDf);
+
+    const donutTooltipOption = { callbacks: { label: function(ctx) { let total = ctx.dataset.data.reduce((a,b)=>a+b,0); let pct = total > 0 ? ((ctx.raw/total)*100).toFixed(1) : 0; return `${ctx.label}: ฿${fm(ctx.raw)} (${pct}%)`; } } };
+
+    try {
+      const c1El = g("c0-bar");
+      if(c1El) {
+        if(c0Bar) c0Bar.destroy();
+        c0Bar = new Chart(c1El, { type:'bar', data:{ labels:bKeys.map(k=>BKS[k]), datasets:[{label:'รายได้จริง', data:bKeys.map(k=>bRev[k]), backgroundColor:'#1971c2'}, {label:'เป้าหมาย', data:bKeys.map(k=>bTg[k]), backgroundColor:'#ced4da'}] }, options:{responsive:true, maintainAspectRatio:false} });
+      }
+    } catch(e){ console.error(e); }
+
+    try {
+      const c2El = g("c0-funnel");
+      if(c2El) {
+        if(c0Funnel) c0Funnel.destroy();
+        c0Funnel = new Chart(c2El, { type:'bar', data:{ labels:['📞 โทรทั้งหมด', '✅ คอนเฟิร์มจะมา', '🏥 มาจริง (Success)'], datasets:[{label:'จำนวนคนไข้', data:[tkCall, tkConf, tkAct], backgroundColor:['#f08c00', '#1971c2', '#2f9e44'], borderRadius:4}] }, options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}} });
+      }
+    } catch(e){ console.error(e); }
+
+    try {
+      const c3El = g("c0-pie");
+      if(c3El) {
+        if(c0Pie) c0Pie.destroy();
+        c0Pie = new Chart(c3El, { type:'doughnut', data:{ labels:['เงินสด', 'แอปพลิเคชัน', 'เงินโอน', 'บัตรเครดิต'], datasets:[{data:[tCash, tApp, tTrans, tCrd], backgroundColor:['#2f9e44', '#845ef7', '#f08c00', '#1971c2']}] }, options:{responsive:true, maintainAspectRatio:false, plugins:{tooltip: donutTooltipOption}} });
+      }
+    } catch(e){ console.error(e); }
+
+    try {
+      const c4El = g("c0-doc");
+      if(c4El) {
+        let sortedDocs = Object.keys(docStats).sort((a,b)=>docStats[b]-docStats[a]).slice(0,5);
+        if(c0Doc) c0Doc.destroy();
+        c0Doc = new Chart(c4El, { type:'bar', data:{ labels:sortedDocs, datasets:[{label:'ยอดขายแพทย์รวม (บาท)', data:sortedDocs.map(d=>docStats[d]), backgroundColor:'#e64980', borderRadius:4}] }, options:{responsive:true, maintainAspectRatio:false, indexAxis:'y'} });
+      }
+    } catch(e){ console.error(e); }
+
+    try {
+      const c5El = g("c0-track1");
+      if(c5El) {
+        if(c0Track1) c0Track1.destroy();
+        c0Track1 = new Chart(c5El, { type:'doughnut', data:{ labels:['ขอเลื่อนนัด', 'ไม่รับสาย/ปิดเครื่อง'], datasets:[{data:[tP_PP, tP_NA], backgroundColor:['#f08c00', '#c92a2a']}] }, options:{responsive:true, maintainAspectRatio:false} });
+      }
+    } catch(e){ console.error(e); }
+
+    try {
+      const c6El = g("c0-track2");
+      if(c6El) {
+        if(c0Track2) c0Track2.destroy();
+        c0Track2 = new Chart(c6El, { type:'doughnut', data:{ labels:['คนไข้เก่า', 'คนไข้ใหม่'], datasets:[{data:[tP_Old, tP_New], backgroundColor:['#1971c2', '#20c997']}] }, options:{responsive:true, maintainAspectRatio:false} });
+      }
+    } catch(e){ console.error(e); }
+
+    try {
+      const c7El = g("c0-d1");
+      if(c7El) {
+        if(c0D1) c0D1.destroy();
+        c0D1 = new Chart(c7El, { type:'doughnut', data:{ labels:['หัตถการ', 'ขายยา', 'Treatment'], datasets:[{data:[tOp, tMed, tTrt], backgroundColor:['#f08c00', '#2f9e44', '#845ef7']}] }, options:{responsive:true, maintainAspectRatio:false, plugins:{tooltip: donutTooltipOption}} });
+      }
+    } catch(e){ console.error(e); }
+
+    try {
+      const c8El = g("c0-d2");
+      if(c8El) {
+        if(c0D2) c0D2.destroy();
+        c0D2 = new Chart(c8El, { type:'doughnut', data:{ labels:['Co2', 'Pico', 'Vbeam'], datasets:[{data:[tCo2, tPico, tVb], backgroundColor:['#1971c2', '#e64980', '#20c997']}] }, options:{responsive:true, maintainAspectRatio:false, plugins:{tooltip: donutTooltipOption}} });
+      }
+    } catch(e){ console.error(e); }
+  });
+}
+
+// ==========================================
+// TAB 1: REVENUE SHEET MASTER RENDER ENGINE
+// ==========================================
+function buildT1() {
+  const moEl = g("r-mo"), brEl = g("r-br"); if (!moEl || !brEl) return;
+  const mo = moEl.value, br = brEl.value; if (!mo) return;
+  
+  const [yr, m] = mo.split("-"); const dim = new Date(yr, m, 0).getDate();
+  if (curT1 !== `${mo}_${br}`) {
+    curT1 = `${mo}_${br}`; let ht = "";
+    for (let i = 1; i <= dim; i++) {
+      let dt = `${yr}-${m}-${String(i).padStart(2, '0')}`;
+      ht += `<tr><td class="bg-date">${i}/${m}/${yr}</td>
+                 <td class="bg-total"><input type="text" class="r-inp row-tot sum-income" id="sum-${dt}" readonly value="0"></td>`;
+      R_COLS.forEach(f => {
+        ht += `<td class="${f.cls}"><input type="text" class="r-inp core-calc-node" id="${f.id}-${dt}" data-dt="${dt}" data-id="${f.id}"></td>`;
+      });
+      ht += `<td class="bg-sum"><input type="text" class="r-inp" style="text-align:center;" id="pax-${dt}" readonly value="0"></td>
+                 <td class="bg-date"><select class="r-inp bg-date sync-doc-node" id="r-doc-${dt}" data-dt="${dt}" data-id="r-doc"></select>
+                 <select class="r-inp bg-date sync-doc-node" id="r-doc2-${dt}" data-dt="${dt}" data-id="r-doc2" style="margin-top:2px;"></select></td></tr>`;
+    }
+    const tbody = g("r-tbody"); if(tbody) tbody.innerHTML = ht;
+    updateSelects(); bindDynamicTableEvents();
+    
+    const tgVal = g("k1-tg-val");
+    if(tgVal) { tgVal.textContent = "฿" + (SETTINGS.tgs[br]||0).toLocaleString(); tgVal.dataset.val = SETTINGS.tgs[br]||0; }
+  }
+
+  if (window.t1Listener) db.ref('ops_daily').off('value', window.t1Listener);
+  window.t1Listener = (snap) => {
+    const all = snap.val() || {};
+    for (let i = 1; i <= dim; i++) {
+      let dt = `${yr}-${m}-${String(i).padStart(2, '0')}`; let d = all[dt]?.[br] || {};
+      R_COLS.forEach(f => {
+        let el = g(`${f.id}-${dt}`);
+        if (el && document.activeElement !== el) el.value = d[f.id] !== undefined && d[f.id] !== "" ? Number(d[f.id]).toLocaleString() : "";
+      });
+      let dSel = g(`r-doc-${dt}`); if (dSel && document.activeElement !== dSel) dSel.value = d["r-doc"] || ""; let dSel2 = g(`r-doc2-${dt}`); if (dSel2 && document.activeElement !== dSel2) dSel2.value = d["r-doc2"] || "";
+      
+      let rTot = 0;
+      R_COLS.forEach(f => {
+        if (f.id !== "r-opx" && f.id !== "r-oam" && f.id !== "r-nyp" && f.id !== "r-nam" && f.id !== "r-nnp") {
+          rTot += parseFloat(String(g(`${f.id}-${dt}`)?.value || "").replace(/,/g, '')) || 0;
+        }
+      });
+      if(g(`sum-${dt}`)) g(`sum-${dt}`).value = rTot.toLocaleString();
+      let totalPax = (parseFloat(d["r-opx"])||0) + (parseFloat(d["r-nyp"])||0) + (parseFloat(d["r-nnp"])||0);
+      if(g(`pax-${dt}`)) g(`pax-${dt}`).value = totalPax.toLocaleString();
+    }
+    calculateDashboard();
+  };
+  db.ref('ops_daily').on('value', window.t1Listener);
+}
+
+// STEP 10: AUTOMATION CENTRAL MATHEMATICAL SUM ENGINE (Pure numeric parsing)
+function calculateRevenueRow(dt) {
+  const h = num(`r-op-${dt}`), drug = num(`r-med-${dt}`), treatment = num(`r-trt-${dt}`);
+  const hd = num(`r-hd-${dt}`), gowabi = num(`r-gw-${dt}`), charge = num(`r-chg-${dt}`);
+  const inject = num(`r-drp-${dt}`), member = num(`r-mem-${dt}`), emp = num(`r-stf-${dt}`), deposit = num(`r-dep-${dt}`);
+
+  const total = h + drug + treatment + hd + gowabi + charge + inject + member + emp + deposit;
+  setValue(`sum-${dt}`, total);
+
+  const opx = num(`r-opx-${dt}`), nyp = num(`r-nyp-${dt}`), nnp = num(`r-nnp-${dt}`);
+  const elPax = g(`pax-${dt}`); if (elPax) elPax.value = (opx + nyp + nnp).toLocaleString();
+
+  calculateDashboard();
+}
+
+function bindDynamicTableEvents() {
+  document.querySelectorAll('.core-calc-node').forEach(el => {
+    el.addEventListener('input', (e) => { const target = e.target; calculateRevenueRow(target.dataset.dt); executeRevenuePipeline(target); });
+    el.addEventListener('blur', (e) => { if(e.target.value!=="") e.target.value = Number(e.target.value.replace(/,/g,'')).toLocaleString(); });
+    el.addEventListener('focus', (e) => { e.target.value = e.target.value.replace(/,/g,''); });
+  });
+  document.querySelectorAll('.sync-doc-node').forEach(el => { el.addEventListener('change', (e) => executeRevenuePipeline(e.target)); });
+}
+
+function executeRevenuePipeline(el) {
+  const dt = el.dataset.dt, br = g("r-br").value, id = el.dataset.id;
+  let rawVal = el.value.replace(/,/g,''); const val = parseFloat(rawVal) || 0;
+  let mapped = {[id]: id === "r-doc" ? el.value : val};
+  
+  if(id === "r-med") mapped["p-product"] = val; if(id === "r-trt") mapped["p-treatment"] = val; 
+  if(id === "r-hd") mapped["a-hdmall"] = val; if(id === "r-gw") mapped["a-gowabi"] = val; 
+  if(id === "r-chg") mapped["p-charge"] = val; if(id === "r-drp") mapped["p-drip"] = val;
+  
+  // Auto-sync รายได้รวม + แพทย์ → Doctor Finance
+  const REV_KEYS = ['r-op','r-med','r-trt','r-hd','r-gw','r-chg','r-drp','r-mem','r-stf','r-dep','r-oth'];
+  if(REV_KEYS.includes(id) || id === 'r-doc' || id === 'r-doc2') {
+    const moKey = dt.slice(0,7);
+    clearTimeout(window._dfSync?.[dt]);
+    if(!window._dfSync) window._dfSync = {};
+    window._dfSync[dt] = setTimeout(() => {
+      // ดึงค่า r-doc จาก UI โดยตรง (ไม่ต้องรอ Firebase save)
+      const docEl  = g(`r-doc-${dt}`);
+      const doc2El = g(`r-doc2-${dt}`);
+      const doc1Val  = docEl?.value  || "";
+      const doc2Val  = doc2El?.value || "";
+
+      db.ref(`ops_daily/${dt}/${br}`).once('value').then(s => {
+        const dd = s.exists() ? s.val() : {};
+        const rTot = REV_KEYS.reduce((sum,k) => sum + (parseFloat(dd[k])||0), 0);
+        const dfUpdate = { 'df-sl': rTot };
+        // ใช้ค่าจาก UI ก่อน ถ้าไม่มีค่อยดึงจาก Firebase
+        dfUpdate['df-doc']  = doc1Val  || dd['r-doc']  || "";
+        dfUpdate['df-doc2'] = doc2Val  || dd['r-doc2'] || "";
+        db.ref(`ops_docfin_mth/${moKey}/${br}/${dt}`).update(dfUpdate);
+      });
+    }, 800);
+  }
+  clearTimeout(tm1[dt]); tm1[dt] = setTimeout(() => {
+    db.ref(`ops_daily/${dt}/${br}`).update(mapped);
+    // Auto-sync to Google Sheet หลัง save
+    _autoSyncToSheet(dt, br);
+  }, 500);
+}
+
+function calculateDashboard() {
+  let totalRevenue = 0;
+  document.querySelectorAll('.sum-income').forEach(el => { totalRevenue += Number(el.value.replace(/,/g,'')) || 0; });
+
+  const tgEl = g("k1-tg-val"); const target = tgEl ? Number(tgEl.dataset.val) || 0 : 0;
+  const achievement = target > 0 ? (totalRevenue / target) * 100 : 0;
+  const remaining = Math.max(target - totalRevenue, 0);
+
+  if(g("k1-rev-val")) g("k1-rev-val").textContent = "฿" + totalRevenue.toLocaleString("th-TH");
+  if(g("k1-pct-val")) g("k1-pct-val").textContent = achievement.toFixed(1) + "%";
+  if(g("k1-rem-val")) g("k1-rem-val").textContent = remaining > 0 ? "฿" + remaining.toLocaleString("th-TH") : "🏆 ทะลุเป้า!";
+
+  // คำนวณวันเหลือในเดือน
+  const moEl2 = g("r-mo");
+  if(moEl2 && moEl2.value) {
+    const [yr2, m2] = moEl2.value.split("-");
+    const lastDay = new Date(parseInt(yr2), parseInt(m2), 0).getDate();
+    const today = new Date();
+    const isSameMonth = today.getFullYear() === parseInt(yr2) && (today.getMonth()+1) === parseInt(m2);
+    const daysLeft = isSameMonth ? Math.max(lastDay - today.getDate() + 1, 0) : 0;
+    if(g("rs-days")) g("rs-days").textContent = daysLeft;
+  }
+  if(g("rs-curr")) g("rs-curr").textContent = totalRevenue.toLocaleString("th-TH");
+  if(g("rs-pct")) g("rs-pct").textContent = achievement.toFixed(1) + "%";
+  if(g("rs-rem")) g("rs-rem").textContent = remaining.toLocaleString("th-TH");
+
+  let totalOp=0, totalMed=0, totalTrt=0, totalOpx=0, totalNyp=0, totalNnp=0, totalOam=0, totalNam=0;
+  document.querySelectorAll('[id^="r-op-"]').forEach(el => totalOp += Number(el.value.replace(/,/g,'')) || 0);
+  document.querySelectorAll('[id^="r-med-"]').forEach(el => totalMed += Number(el.value.replace(/,/g,'')) || 0);
+  document.querySelectorAll('[id^="r-trt-"]').forEach(el => totalTrt += Number(el.value.replace(/,/g,'')) || 0);
+  document.querySelectorAll('[id^="r-opx-"]').forEach(el => totalOpx += Number(el.value.replace(/,/g,'')) || 0);
+  document.querySelectorAll('[id^="r-nyp-"]').forEach(el => totalNyp += Number(el.value.replace(/,/g,'')) || 0);
+  document.querySelectorAll('[id^="r-nnp-"]').forEach(el => totalNnp += Number(el.value.replace(/,/g,'')) || 0);
+  document.querySelectorAll('[id^="r-oam-"]').forEach(el => totalOam += Number(el.value.replace(/,/g,'')) || 0);
+  document.querySelectorAll('[id^="r-nam-"]').forEach(el => totalNam += Number(el.value.replace(/,/g,'')) || 0);
+
+  if(g("rs-pax")) g("rs-pax").textContent = (totalOpx + totalNyp + totalNnp).toLocaleString("th-TH");
+  if(g("rs-old")) g("rs-old").textContent = totalOpx.toLocaleString("th-TH");
+  if(g("rs-new")) g("rs-new").textContent = (totalNyp + totalNnp).toLocaleString("th-TH");
+  if(g("rs-avg-old")) g("rs-avg-old").textContent = totalOpx > 0 ? Math.round(totalOam / totalOpx).toLocaleString("th-TH") : "0";
+  if(g("rs-avg-new")) g("rs-avg-new").textContent = (totalNyp + totalNnp) > 0 ? Math.round(totalNam / (totalNyp + totalNnp)).toLocaleString("th-TH") : "0";
+  if(g("rs-sop")) g("rs-sop").textContent = totalOp.toLocaleString("th-TH");
+  if(g("rs-smed")) g("rs-smed").textContent = totalMed.toLocaleString("th-TH");
+  if(g("rs-strt")) g("rs-strt").textContent = totalTrt.toLocaleString("th-TH");
+
+  try {
+    const ctxTrend = g("c1-trend");
+    if(ctxTrend) {
+      let trendData = []; document.querySelectorAll('.sum-income').forEach(el => trendData.push(Number(el.value.replace(/,/g,''))||0));
+      if(c1Trend) c1Trend.destroy();
+      c1Trend = new Chart(ctxTrend, { type:'line', data:{ labels:Array.from({length:trendData.length},(_,i)=>i+1), datasets:[{label:'ยอดขายรายวัน', data:trendData, borderColor:'#845ef7', tension:0.2, fill:true, backgroundColor:'rgba(132, 94, 247, 0.08)'}] }, options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}} });
+    }
+  } catch(e){ console.warn(e); }
+
+  try {
+    const ctxDonut = g("c1-br-donut");
+    if(ctxDonut) {
+      if(c1BrDonut) c1BrDonut.destroy();
+      c1BrDonut = new Chart(ctxDonut, { type:'doughnut', data:{ labels:['หัตถการ', 'ขายยา', 'Treatment'], datasets:[{data:[totalOp, totalMed, totalTrt], backgroundColor:['#f08c00', '#2f9e44', '#845ef7']}] }, options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'right'}}} });
+    }
+  } catch(e){ console.warn(e); }
+}
+
+// STEP 9: HIGHER-ORDER EXCEL DYNAMIC HEADER INDEX MAPPING PARSER MATRIX (Fixes Broken Import Issue)
+function handleExcelImportUpload(inputControl) {
+  const f = inputControl.files[0]; if(!f) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const data = new Uint8Array(e.target.result);
+      const workbook = XLSX.read(data, { type: 'array', cellDates: false });
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: false });
+      
+      const mo = g("r-mo").value, br = g("r-br").value; if(!mo || !br) { toast("❌ กรุณาระบุเงื่อนไขเดือนและสาขาก่อนนำเข้า", "error"); return; }
+      const [yr, m] = mo.split("-");
+
+      const headers = rows[0]; const map = {};
+      headers.forEach((h, idx) => { if(h) map[String(h).trim()] = idx; });
+
+      let updates = {}; let count = 0;
+      let cleanVal = (rowArray, keyName) => {
+        let colIdx = map[keyName]; if(colIdx === undefined) return 0;
+        let cellRaw = rowArray[colIdx]; if(!cellRaw) return 0;
+        return parseFloat(String(cellRaw).replace(/,/g, '')) || 0;
+      };
+
+      rows.forEach((row, index) => {
+        if (index === 0) return;
+        const dateCell = row[map["วันที่"]]; if (!dateCell) return;
+        
+        let targetDay = null;
+        let strD = String(dateCell).trim();
+        if (strD && !strD.includes("วันที่") && !strD.includes("รวม") && !strD.includes("Total")) {
+          if (strD.includes("/")) { targetDay = parseInt(strD.split("/")[0], 10); }
+          else if (strD.includes("-")) {
+            let pts = strD.split("-");
+            if (pts[0].length === 4) targetDay = parseInt(pts[2], 10);
+            else targetDay = parseInt(pts[0], 10);
+          } else { targetDay = parseInt(strD, 10); }
+        }
+
+        if (!targetDay || isNaN(targetDay) || targetDay < 1 || targetDay > 31) return;
+        const dayKey = String(targetDay).padStart(2, '0');
+        const pathPrefix = `${yr}-${m}-${dayKey}`;
+
+        // STABLE SYNTAX PAIRS MAPPING: ล้างค่าคอมม่าหลักพัน คีย์ข้อมูลเข้า Firebase ครบถ้วน 31 บรรทัด
+        updates[`${pathPrefix}/${br}/r-op`] = cleanVal(row, "หัตถการ");
+        updates[`${pathPrefix}/${br}/r-med`] = cleanVal(row, "ขายยา");
+        updates[`${pathPrefix}/${br}/r-trt`] = cleanVal(row, "Treatment");
+        updates[`${pathPrefix}/${br}/r-hd`] = cleanVal(row, "HD MALL");
+        updates[`${pathPrefix}/${br}/r-gw`] = cleanVal(row, "Gowabi");
+        updates[`${pathPrefix}/${br}/r-chg`] = cleanVal(row, "ชาร์จ 3%");
+        updates[`${pathPrefix}/${br}/r-drp`] = cleanVal(row, "ฉีดผิว");
+        updates[`${pathPrefix}/${br}/r-mem`] = cleanVal(row, "member");
+        updates[`${pathPrefix}/${br}/r-stf`] = cleanVal(row, "หัตถการ พนง.");
+        updates[`${pathPrefix}/${br}/r-dep`] = cleanVal(row, "มัดจำเงิน");
+        updates[`${pathPrefix}/${br}/r-oth`] = cleanVal(row, "รวมรายได้อื่นๆ");
+        updates[`${pathPrefix}/${br}/r-opx`] = cleanVal(row, "คนไข้เก่า (คน)");
+        updates[`${pathPrefix}/${br}/r-oam`] = cleanVal(row, "คนไข้เก่า (ยอด)");
+        updates[`${pathPrefix}/${br}/r-nyp`] = cleanVal(row, "คนไข้ใหม่มี (คน)");
+        updates[`${pathPrefix}/${br}/r-nam`] = cleanVal(row, "คนไข้ใหม่มียอด (บาท)");
+        updates[`${pathPrefix}/${br}/r-nnp`] = cleanVal(row, "คนไข้ใหม่ไม่มี (คน)");
+        
+        updates[`${pathPrefix}/${br}/p-product`] = cleanVal(row, "ขายยา");
+        updates[`${pathPrefix}/${br}/p-treatment`] = cleanVal(row, "Treatment");
+        updates[`${pathPrefix}/${br}/a-hdmall`] = cleanVal(row, "HD MALL");
+        updates[`${pathPrefix}/${br}/a-gowabi`] = cleanVal(row, "Gowabi");
+        updates[`${pathPrefix}/${br}/p-charge`] = cleanVal(row, "ชาร์จ 3%");
+        updates[`${pathPrefix}/${br}/p-drip`] = cleanVal(row, "ฉีดผิว");
+        updates[`${pathPrefix}/${br}/r-mem`] = cleanVal(row, "member");
+        
+        let docColIdx = map["แพทย์"]; updates[`${pathPrefix}/${br}/r-doc`] = docColIdx !== undefined ? (row[docColIdx] || "") : "";
+        count++;
+      });
+
+      if(count > 0) {
+        db.ref('ops_daily').update(updates).then(() => {
+          toast(`📥 Import Success: ดึงข้อมูลยอดขายตรงตามไฟล์ต้นฉบับสำเร็จ ${count} วัน`); buildT1();
+        }).catch(err => toast("Firebase Error: " + err.message, "error"));
+      } else { toast("❌ ไม่พบโครงสร้างแถวข้อมูลวันที่ตรงกับเงื่อนไขชีทนี้", "error"); }
+    } catch(err) { console.error(err); toast("❌ Excel Parsing Failure: รูปแบบชีทชำรุด", "error"); }
+  };
+  reader.readAsArrayBuffer(f); inputControl.value = "";
+}
+
+function exportT1() {
+  let data = [["วันที่", "รายได้รวม", "หัตถการ", "ขายยา", "Treatment", "HD MALL", "Gowabi", "ชาร์จ 3%", "ฉีดผิว", "member", "หัตถการ พนง.", "มัดจำเงิน", "รวมรายได้อื่นๆ", "คนไข้เก่า(คน)", "คนไข้เก่า(ยอด)", "คนไข้ใหม่(คน)", "คนไข้ใหม่(ยอด)", "ใหม่ไม่มียอด(คน)", "คนไข้รวม", "แพทย์"]];
+  document.querySelectorAll("#r-tbody tr").forEach(row => {
+    let rTotInput = row.querySelector('.row-tot'); if(!rTotInput) return;
+    let dtStr = rTotInput.id.replace('sum-', ''), rData = [row.cells[0].textContent.trim(), parseFloat(rTotInput.value.replace(/,/g,''))||0];
+    R_COLS.forEach(c => { rData.push(Number((g(`${c.id}-${dtStr}`)?.value || "0").replace(/,/g, ''))); });
+    rData.push(Number((g(`pax-${dtStr}`)?.value || "0").replace(/,/g, ''))); rData.push(g(`r-doc-${dtStr}`)?.value || ""); data.push(rData);
+  });
+  const ws = XLSX.utils.aoa_to_sheet(data); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Revenue"); XLSX.writeFile(wb, `Revenue_Sheet_${g("r-br").value}_${g("r-mo").value}.xlsx`);
+}
+
+// ==========================================
+// TAB 2: DAILY OPS CORE MODULE
+// ==========================================
+function buildT2() {
+  const tb = g("o-tbody"); if(!tb) return;
+  const rows = [
+    {lbl:"Co2",                  oid:"p0",          vid:"v0"},
+    {lbl:"Pico",                 oid:"p1",          vid:"v1"},
+    {lbl:"Vbeam",                oid:"p2",          vid:"v2"},
+    {lbl:"Elos",                 oid:"p3",          vid:"v3"},
+    {lbl:"Botox",                oid:"p4",          vid:"v4"},
+    {lbl:"Filler",               oid:"p5",          vid:"v5"},
+    {lbl:"Meso",                 oid:"p6",          vid:"v6"},
+    {lbl:"Thermage",             oid:"p7",          vid:"v7"},
+    {lbl:"Ulthera",              oid:"p8",          vid:"v8"},
+    {lbl:"Treatment",            oid:"p-treatment", vid:"v9",   flow:"r-trt"},
+    {lbl:"Drip Vitamin (Nures)", oid:"p-drip",      vid:"v10",  flow:"r-drp"},
+    {lbl:"Product (ขายยา)",      oid:"p-product",   vid:"v11",  flow:"r-med"},
+    {lbl:"ชาร์จ 3%",             oid:"p-charge",    vid:"v12",  flow:"r-chg"},
+    {lbl:"Gowabi",               oid:"p-gowabi",    vid:"v13",  flow:"r-gw"},
+    {lbl:"",                     oid:"cust-id-1",   vid:"vcust1", custom:true, labelId:"cust-lbl-1"},
+    {lbl:"",                     oid:"cust-id-2",   vid:"vcust2", custom:true, labelId:"cust-lbl-2"},
+  ];
+  const totalRows = rows.length + 1; // +1 for subtotal row
+  let ht = "";
+  rows.forEach((r, i) => {
+    const progCell = r.custom
+      ? `<input type="text" id="${r.labelId}" class="ops-lbl-node" placeholder="ระบุรายการ" style="border:none;border-bottom:1px dotted #bbb;width:100%;font-size:13px;background:transparent;padding:4px;">`
+      : `<span style="font-size:13px;">${r.lbl}${r.flow ? ' <span style=\"font-size:9px;color:#aaa;\">●</span>' : ''}</span>`;
+
+    // ยอดหน้าร้าน: merge cell แนวตั้ง แสดงแค่แถวแรก
+    const frontCell = i === 0
+      ? `<td rowspan="${totalRows}" style="text-align:center;vertical-align:middle;background:#f8f9fa;border-right:1px solid #bbb;">
+           <div style="font-size:11px;color:#888;margin-bottom:6px;">ยอดหน้าร้านรวม</div>
+           <input type="text" id="front-store-val" class="ops-node-inp" style="font-size:20px;font-weight:700;text-align:center;width:100%;border:none;border-bottom:1px dotted #bbb;background:transparent;color:#1D4ED8;">
+         </td>`
+      : "";
+
+    const flowAttr = r.flow ? ` data-flow="${r.flow}"` : '';
+    ht += `<tr>
+      ${frontCell}
+      <td style="padding:5px 7px;vertical-align:middle;">${progCell}</td>
+      <td class="ti"><input type="text" id="${r.oid}" class="ops-node-inp o-val"${flowAttr}></td>
+      <td class="ti ti-red"><input type="text" id="${r.vid}" class="ops-node-inp v-val" style="color:#c92a2a;"></td>
+    </tr>`;
+  });
+  // subtotal row
+  ht += `<tr class="a4d-sub">
+    <td class="tl2" style="font-weight:700;">ยอดรวม Program</td>
+    <td class="tc" id="t-vip" style="color:#c92a2a;">0</td>
+    <td class="tc"><input type="text" id="t-prog" readonly value="0" style="background:transparent;border:none;font-size:17px;font-weight:700;width:100%;text-align:center;"></td>
+  </tr>`;
+  tb.innerHTML = ht;
+  bindT2InputNodeListeners();
+  loadT2();
+}
+
+
+// auto-flow: ดึงข้อมูลจาก Revenue Sheet ตาม วันที่ + สาขา
+function autoFlowT2() {
+  const dt = g("o-dt")?.value, br = g("o-br")?.value;
+  if(!dt || !br) { toast("❌ กรุณาเลือกสาขาและวันที่ก่อน"); return; }
+
+  db.ref(`ops_daily/${dt}/${br}`).once('value').then(snap => {
+    if(!snap.exists()) { toast("⚠️ ไม่พบข้อมูล Revenue Sheet ของวันนี้"); return; }
+    const d = snap.val();
+    let filled = 0;
+
+    // ดึงตาม data-flow attribute (Treatment, Drip, Product, ชาร์จ 3%, Gowabi)
+    document.querySelectorAll('[data-flow]').forEach(inp => {
+      const key = inp.dataset.flow;
+      const val = d[key];
+      if(val !== undefined && val !== "" && val !== 0) {
+        inp.value = Number(val).toLocaleString();
+        filled++;
+      }
+    });
+
+    // HDmall แยก (ไม่มี data-flow เพราะ id ต่างกัน)
+    if(d['r-hd'] !== undefined && g('a-hdmall')) {
+      g('a-hdmall').value = d['r-hd'] ? Number(d['r-hd']).toLocaleString() : "";
+      if(d['r-hd']) filled++;
+    }
+
+    // แพทย์ (1) จาก r-doc
+    if(d['r-doc'] && g('o-doc')) {
+      const docSel = g('o-doc');
+      for(let opt of docSel.options){
+        if(opt.value === d['r-doc'] || opt.text === d['r-doc']){
+          docSel.value = opt.value; filled++; break;
+        }
+      }
+    }
+
+    cT2(true);
+    toast(`✅ ดึงข้อมูลจาก Revenue Sheet แล้ว (${filled} รายการ)`);
+  }).catch(err => toast("❌ เกิดข้อผิดพลาด: " + err.message));
+}
+
+function bindT2InputNodeListeners() {
+  document.querySelectorAll('.ops-node-inp').forEach(el => {
+    el.addEventListener('input', () => cT2());
+    el.addEventListener('blur', (e) => { if(e.target.value!=="") e.target.value = Number(e.target.value.replace(/,/g,'')).toLocaleString(); });
+    el.addEventListener('focus', (e) => { e.target.value = e.target.value.replace(/,/g,''); });
+  });
+  document.querySelectorAll('.ops-lbl-node').forEach(el => { el.addEventListener('input', (e) => saveT2Quick(e.target.id, e.target.value)); });
+}
+
+function loadT2() {
+  const dt = g("o-dt")?.value, br = g("o-br")?.value; if(!dt || !br) return;
+  db.ref(`ops_daily/${dt}/${br}`).once('value').then(snap => {
+    document.querySelectorAll('#t2-content input[type="text"]').forEach(e => { if(!e.readOnly && e.id!=='t-grand' && !e.id.includes('cust-lbl') && e.id!=='o-rsn' && e.id!=='o-note' && e.id!=='c-oth-n') e.value="" });
+    if(snap.exists()){
+      const d = snap.val();
+      for(let k in d){
+        let el = g(k); if(el && document.activeElement !== el){
+          if(k.includes('lbl') || k.includes('rsn') || k.includes('note')) el.value = d[k];
+          else el.value = d[k]!=="" ? Number(d[k]).toLocaleString() : "";
+        }
+      }
+    }
+    // restore doc selects after updateSelects rebuilds options
+    const docVal = g('o-doc')?.value || '';
+    const doc2Val = g('o-doc2')?.value || '';
+    cT2(true); 
+    updateSelects();
+    if(g('o-doc') && docVal) g('o-doc').value = docVal;
+    if(g('o-doc2') && doc2Val) g('o-doc2').value = doc2Val;
+    // load from firebase if not set yet
+    if(snap.exists()){
+      const d2 = snap.val();
+      if(d2['o-doc'] && g('o-doc')) g('o-doc').value = d2['o-doc'];
+      if(d2['o-doc2'] && g('o-doc2')) g('o-doc2').value = d2['o-doc2'];
+    }
+  }).catch(()=>cT2(true));
+}
+
+function cT2(fromLoad = false) {
+  let tp=0, tv=0, tc=0;
+  document.querySelectorAll(".o-val").forEach(e=>tp+=Number(e.value.replace(/,/g,''))||0);
+  document.querySelectorAll(".v-val").forEach(e=>tv+=Number(e.value.replace(/,/g,''))||0);
+  document.querySelectorAll(".c-val").forEach(e=>tc+=Number(e.value.replace(/,/g,''))||0);
+  // calc amt = front - vip per row
+  document.querySelectorAll("[id^='amt-']").forEach(el => {
+    const oid = el.id.replace('amt-','');
+    const ov = Number((g(oid)?.value||"").replace(/,/g,''))||0;
+    const vid = el.closest('tr')?.querySelector('.v-val')?.value||"";
+    const vv = Number(vid.replace(/,/g,''))||0;
+    el.value = (ov - vv) > 0 ? (ov-vv).toLocaleString() : "";
+  });
+  if(g("t-prog")) g("t-prog").value = tp.toLocaleString();
+  if(g("t-vip")) g("t-vip").textContent = tv.toLocaleString();
+  if(g("t-prog-net")) g("t-prog-net").value = (tp-tv).toLocaleString();
+  // credit sum
+  let crdSum = 0;
+  ['cr-credit','cr-kbank-scan','cr-ktc','cr-bay','cr-scb','cr-ttb','cr-bbl','cr-other','a-hdmall','a-gowabi'].forEach(id=>{
+    crdSum += Number((g(id)?.value||"").replace(/,/g,''))||0;
+  });
+  if(g('t-crd-sum')) g('t-crd-sum').textContent = crdSum.toLocaleString();
+  let cash = Number((g("pay-cash")?.value||"").replace(/,/g,''))||0;
+  let trans = Number((g("pay-trans")?.value||"").replace(/,/g,''))||0;
+  let grand = crdSum + cash + trans;
+  if(g("t-grand")) g("t-grand").value = grand.toLocaleString();
+  if(g("t-grand-disp")) g("t-grand-disp").textContent = grand.toLocaleString();
+  // update manager display
+  if(g("o-mg") && g("o-mg-disp")) g("o-mg-disp").textContent = g("o-mg").value || "—";
+}
+
+function saveT2Quick(id, val) { const dt=g("o-dt").value, br=g("o-br").value; let rawVal = val.toString().replace(/,/g, ''); db.ref(`ops_daily/${dt}/${br}`).update({[id]: isNaN(parseFloat(rawVal)) ? rawVal : parseFloat(rawVal)}); }
+function saveT2() {
+  const dt=g("o-dt").value, br=g("o-br").value; if(!dt)return;
+  let p={}; document.querySelectorAll('#t2-content input, #t2-content select').forEach(e=>{ if(e.id && !e.readOnly) { let rawVal = e.value.toString().replace(/,/g, ''); p[e.id] = (!isNaN(rawVal) && rawVal !== "" && !e.id.includes('lbl') && !e.id.includes('rsn') && !e.id.includes('note') && !e.id.includes('c-oth-n')) ? parseFloat(rawVal) : e.value; } });
+  db.ref(`ops_daily/${dt}/${br}`).update(p).then(()=>toast("✅ บันทึกฟอร์มบัญชี Daily Ops สำเร็จ"));
+}
+
+// ==========================================
+// CONFIRM TRACKING DATA APAPTER MODULE
+// ==========================================
+function buildT3() {
+  const moEl = g("tk-mo"), brEl = g("tk-br"); if (!moEl || !brEl) return;
+  const mo = moEl.value, br = brEl.value; if (!mo) return;
+  
+  const [yr, m] = mo.split("-"); const dim = new Date(yr, m, 0).getDate();
+  const t3Key = `${mo}_${br}`;
+  if (curT3 !== t3Key) {
+    curT3 = t3Key; let ht = "";
+    for (let i = 1; i <= dim; i++) {
+      let dt = `${yr}-${m}-${String(i).padStart(2, '0')}`;
+      ht += `<tr><td style="font-weight:bold;background:#f8f9fa;">${i}/${m}/${yr}</td>
+        <td><input type="text" class="mth-inp tk-calc-node" id="tk-co-${dt}" data-dt="${dt}" data-id="tk-co"></td>
+        <td><input type="text" class="mth-inp tk-calc-node" id="tk-cn-${dt}" data-dt="${dt}" data-id="tk-cn"></td>
+        <td><input type="text" class="mth-inp tk-calc-node" id="tk-po-${dt}" data-dt="${dt}" data-id="tk-po"></td>
+        <td><input type="text" class="mth-inp tk-calc-node" id="tk-pn-${dt}" data-dt="${dt}" data-id="tk-pn"></td>
+        <td><input type="text" class="mth-inp tk-calc-node" id="tk-wo-${dt}" data-dt="${dt}" data-id="tk-wo"></td>
+        <td><input type="text" class="mth-inp tk-calc-node" id="tk-wn-${dt}" data-dt="${dt}" data-id="tk-wn"></td>
+        <td><input type="text" class="mth-inp tk-calc-node" id="tk-na-${dt}" data-dt="${dt}" data-id="tk-na"></td>
+        <td><input type="text" class="mth-inp tk-calc-node" id="tk-tc-${dt}" data-dt="${dt}" data-id="tk-tc"></td>
+        <td><input type="text" class="mth-inp tk-calc-node" id="tk-ro-${dt}" data-dt="${dt}" data-id="tk-ro"></td>
+        <td><input type="text" class="mth-inp tk-calc-node" id="tk-rn-${dt}" data-dt="${dt}" data-id="tk-rn"></td>
+        <td><input type="text" class="mth-inp row-tk-tot" id="tk-tot-${dt}" readonly value="0"></td></tr>`;
+    }
+    const tbody = g("tk-tbody"); if(tbody) tbody.innerHTML = ht; bindT3NodeListeners();
+  }
+  db.ref(`ops_tracking_mth/${mo}/${br}`).once('value').then(snap => {
+    const dAll = snap.val() || {};
+    for (let i = 1; i <= dim; i++) {
+      let dt = `${yr}-${m}-${String(i).padStart(2, '0')}`; let d = dAll[dt] || {};
+      ["tk-co","tk-cn","tk-po","tk-pn","tk-wo","tk-wn","tk-na","tk-tc","tk-ro","tk-rn"].forEach(k => {
+        let el = g(`${k}-${dt}`); if (el) el.value = d[k] !== undefined ? Number(d[k]).toLocaleString() : "";
+      });
+      calcT3Row(dt);
+    }
+    drawT3Chart();
+    updateT3Summary();
+  });
+}
+function bindT3NodeListeners() {
+  document.querySelectorAll('.tk-calc-node').forEach(el => {
+    el.addEventListener('input', (e) => { const target = e.target; calcT3Row(target.dataset.dt); svT3(target); updateT3Summary(); });
+    el.addEventListener('blur', (e) => { if(e.target.value!=="") e.target.value = Number(e.target.value.replace(/,/g,'')).toLocaleString(); });
+    el.addEventListener('focus', (e) => { e.target.value = e.target.value.replace(/,/g,''); });
+  });
+}
+function calcT3Row(dt) { let ro = Number((g(`tk-ro-${dt}`)?.value||"").replace(/,/g,''))||0; let rn = Number((g(`tk-rn-${dt}`)?.value||"").replace(/,/g,''))||0; let el = g(`tk-tot-${dt}`); if(el) el.value = (ro + rn).toLocaleString(); }
+function updateT3Summary() {
+  let tCf=0, tAct=0, tPp=0, tNa=0;
+  document.querySelectorAll('#tk-tbody tr').forEach(row => {
+    let co = Number((row.querySelector('[id^="tk-co-"]')?.value||"").replace(/,/g,''))||0;
+    let cn = Number((row.querySelector('[id^="tk-cn-"]')?.value||"").replace(/,/g,''))||0;
+    let po = Number((row.querySelector('[id^="tk-po-"]')?.value||"").replace(/,/g,''))||0;
+    let pn = Number((row.querySelector('[id^="tk-pn-"]')?.value||"").replace(/,/g,''))||0;
+    let na = Number((row.querySelector('[id^="tk-na-"]')?.value||"").replace(/,/g,''))||0;
+    let ro = Number((row.querySelector('[id^="tk-ro-"]')?.value||"").replace(/,/g,''))||0;
+    let rn = Number((row.querySelector('[id^="tk-rn-"]')?.value||"").replace(/,/g,''))||0;
+    tCf += co+cn; tPp += po+pn; tNa += na; tAct += ro+rn;
+  });
+  if(g('k3-cf')) g('k3-cf').textContent = tCf.toLocaleString();
+  if(g('k3-act')) g('k3-act').textContent = tAct.toLocaleString();
+  if(g('k3-pp')) g('k3-pp').textContent = tPp.toLocaleString();
+  if(g('k3-na')) g('k3-na').textContent = tNa.toLocaleString();
+}
+function svT3(el) { const dt = el.dataset.dt, br = g("tk-br").value, mo = g("tk-mo").value, id = el.dataset.id, val = Number(el.value.replace(/,/g,'')) || 0; drawT3Chart(); clearTimeout(tm3[dt]); tm3[dt] = setTimeout(() => { db.ref(`ops_tracking_mth/${mo}/${br}/${dt}`).update({[id]:val}); }, 500); }
+
+// ==========================================
+// DOCTOR FINANCE SCHEDULING MODULE
+// ==========================================
+function buildT4() {
+  const moEl = g("df-mo"), brEl = g("df-br"); if (!moEl || !brEl) return;
+  const mo = moEl.value, br = brEl.value; if (!mo) return;
+  
+  const [yr, m] = mo.split("-"); const dim = new Date(yr, m, 0).getDate();
+  {
+    let ht = "";
+    for (let i = 1; i <= dim; i++) {
+      let dt = `${yr}-${m}-${String(i).padStart(2, '0')}`;
+      let docSel = `<select class="mth-inp doc-select-node" id="df-doc-${dt}" data-dt="${dt}" data-id="df-doc"><option value="">-</option></select> <select class="mth-inp doc-select-node" id="df-doc2-${dt}" data-dt="${dt}" data-id="df-doc2" style="margin-top:3px;"><option value="">-</option></select>`;
+      ht += `<tr><td style="font-weight:bold;background:#f8f9fa;">${i}/${m}/${yr}</td>
+        <td>${docSel}</td>
+        <td><input type="time" class="mth-inp doc-input-node" id="df-ti-${dt}" data-dt="${dt}" data-id="df-ti"></td>
+        <td><input type="time" class="mth-inp doc-input-node" id="df-to-${dt}" data-dt="${dt}" data-id="df-to"></td>
+        <td><input type="text" class="mth-inp doc-input-node" style="background:#dbeafe;" id="df-sl-${dt}" data-dt="${dt}" data-id="df-sl"></td>
+        <td><input type="text" class="mth-inp doc-input-node" style="background:#fff3cd;" id="df-df-${dt}" data-dt="${dt}" data-id="df-df"></td>
+        <td><input type="text" class="mth-inp doc-input-node" style="text-align:left;padding-left:10px;" id="df-nt-${dt}" data-dt="${dt}" data-id="df-nt"></td></tr>`;
+    }
+    const tbody = g("df-tbody"); if(tbody) tbody.innerHTML = ht; updateSelects(); bindT4NodeListeners();
+  }
+  db.ref(`ops_docfin_mth/${mo}/${br}`).once('value').then(snap => {
+    const dAll = snap.val() || {};
+    for (let i = 1; i <= dim; i++) {
+      let dt = `${yr}-${m}-${String(i).padStart(2, '0')}`; let d = dAll[dt] || {};
+      ["df-ti","df-to","df-nt"].forEach(k => { let el = g(`${k}-${dt}`); if (el) el.value = d[k] || ""; });
+      ["df-sl","df-df"].forEach(k => { let el = g(`${k}-${dt}`); if (el) el.value = d[k] !== undefined ? Number(d[k]).toLocaleString() : ""; });
+      let sel = g(`df-doc-${dt}`); if (sel) sel.value = d["df-doc"] || ""; let sel2 = g(`df-doc2-${dt}`); if (sel2) sel2.value = d["df-doc2"] || "";
+    }
+    drawT4Chart();
+  });
+}
+function bindT4NodeListeners() {
+  document.querySelectorAll('.doc-input-node').forEach(el => {
+    el.addEventListener('input', (e) => svT4(e.target));
+    if(el.type === "text") {
+      el.addEventListener('blur', (e) => { if(e.target.value!=="") e.target.value = Number(e.target.value.replace(/,/g,'')).toLocaleString(); });
+      el.addEventListener('focus', (e) => { e.target.value = e.target.value.replace(/,/g,''); });
+    }
+  });
+  document.querySelectorAll('.doc-select-node').forEach(el => el.addEventListener('change', (e) => svT4(e.target)));
+}
+function svT4(el) { const dt = el.dataset.dt, br = g("df-br").value, mo = g("df-mo").value, id = el.dataset.id; const val = (id === "df-sl" || id === "df-df") ? parseFloat(el.value.replace(/,/g,''))||0 : el.value; drawT4Chart(); clearTimeout(tm4[dt]); tm4[dt] = setTimeout(() => { db.ref(`ops_docfin_mth/${mo}/${br}/${dt}`).update({[id]:val}); }, 500); }
+function drawT4Chart() {
+  let sSal=0, sDf=0; let docStats = {};
+  document.querySelectorAll("#df-tbody tr").forEach(row => {
+    let sl = Number(row.querySelector("[id^='df-sl-']")?.value.replace(/,/g,''))||0; let df = Number(row.querySelector("[id^='df-df-']")?.value.replace(/,/g,''))||0;
+    let doc = row.querySelector("[id^='df-doc-']").value; sSal += sl; sDf += df; if(doc && sl>0) docStats[doc] = (docStats[doc]||0) + sl;
+  });
+  if(g("k4-sal")) g("k4-sal").textContent = "฿" + sSal.toLocaleString(); if(g("k4-df")) g("k4-df").textContent = "฿" + sDf.toLocaleString();
+  try {
+    const ctxDF = g("c4-bar"); if(!ctxDF) return;
+    let sortedDocs = Object.keys(docStats).sort((a,b)=>docStats[b]-docStats[a]);
+    if(c4Bar) c4Bar.destroy();
+    c4Bar = new Chart(ctxDF, { type:'bar', data:{ labels:sortedDocs, datasets:[{label:'ยอดขายแพทย์ (บาท)', data:sortedDocs.map(d=>docStats[d]), backgroundColor:'#1971c2', borderRadius:4}] }, options:{responsive:true, maintainAspectRatio:false, indexAxis:'y'} });
+  } catch(err) { console.warn(err); }
+}
+
+// ==========================================
+// TAB 5: SYSTEM GLOBAL CONFIGURATION RENDER
+// ==========================================
+function loadT5() {
+  // Build targets inputs ถ้ายังไม่มี
+  const tgBox = g("s-tg");
+  if(tgBox && !tgBox.querySelector('input')) {
+    tgBox.innerHTML = bKeys.map(k => `
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f0f0f0;">
+        <label style="font-weight:600;font-size:14px;min-width:140px;">${BKS[k]}</label>
+        <input type="text" id="tg-${k}" class="t5-inp" style="width:180px;text-align:right;font-size:15px;font-weight:700;padding:6px 10px;border:1px solid #ddd;border-radius:4px;" placeholder="0">
+      </div>`).join("");
+  }
+  db.ref('ops_system_settings').once('value').then(snap => {
+    if(snap.exists()) {
+      const d = snap.val();
+      if(d.docs && d.docs.length) SETTINGS.docs = d.docs;
+      if(d.cas  && d.cas.length)  SETTINGS.cas  = d.cas;
+      if(d.mgs  && d.mgs.length)  SETTINGS.mgs  = d.mgs;
+      if(d.tgs) SETTINGS.tgs = d.tgs;
+    }
+    if(g("s-dr")) g("s-dr").value = SETTINGS.docs.join(", ");
+    if(g("s-ca")) g("s-ca").value = SETTINGS.cas.join(", ");
+    if(g("s-mg")) g("s-mg").value = SETTINGS.mgs.join(", ");
+    bKeys.forEach(k => {
+      const el = g(`tg-${k}`);
+      if(el) el.value = (SETTINGS.tgs[k]||0).toLocaleString();
+    });
+    // format on blur
+    document.querySelectorAll('.t5-inp').forEach(el => {
+      el.addEventListener('blur', () => { let v=parseFloat(el.value.replace(/,/g,''))||0; el.value=v.toLocaleString(); });
+      el.addEventListener('focus', () => { el.value=el.value.replace(/,/g,''); });
+    });
+  });
+}
+
+function saveT5() {
+  bKeys.forEach(k => { let el = g(`tg-${k}`); if(el) SETTINGS.tgs[k] = parseFloat(el.value.replace(/,/g,''))||0; });
+
+  // ถ้าไม่มี registry ให้ fallback save docs/cas/mgs ลง settings เดิม
+  const docsTxt = g("s-dr")?.value || "";
+  const casTxt  = g("s-ca")?.value || "";
+  const mgsTxt  = g("s-mg")?.value || "";
+  const newDocs = docsTxt.split(",").map(s=>s.trim()).filter(Boolean);
+  const newCas  = casTxt.split(",").map(s=>s.trim()).filter(Boolean);
+  const newMgs  = mgsTxt.split(",").map(s=>s.trim()).filter(Boolean);
+
+  // บันทึก targets + fallback lists ลง ops_system_settings
+  const payload = { tgs: SETTINGS.tgs, docs: newDocs, cas: newCas, mgs: newMgs };
+  db.ref('ops_system_settings').set(payload).then(() => {
+    SETTINGS.docs = newDocs; SETTINGS.cas = newCas; SETTINGS.mgs = newMgs;
+
+    // ถ้ามีข้อมูลใน doctor_registry / staff_registry → sync ไปด้วย
+    const docUpdates = {};
+    newDocs.forEach((name, i) => { docUpdates[`DOC${String(i+1).padStart(3,'0')}`] = { name, branches: [] }; });
+    const staffUpdates = {};
+    newCas.forEach((name, i) => { staffUpdates[`CAS${String(i+1).padStart(3,'0')}`] = { name, role: 'cashier' }; });
+    newMgs.forEach((name, i) => { staffUpdates[`MGR${String(i+1).padStart(3,'0')}`] = { name, role: 'manager' }; });
+
+    const writes = [db.ref('ops_system_settings').set(payload)];
+    if (newDocs.length) writes.push(db.ref('doctor_registry').set(docUpdates));
+    if (newCas.length || newMgs.length) writes.push(db.ref('staff_registry').set(staffUpdates));
+
+    Promise.all(writes).then(() => {
+      SETTINGS.docs = newDocs; SETTINGS.cas = newCas; SETTINGS.mgs = newMgs;
+      // clear cache เพื่อให้ login ครั้งหน้าดึงใหม่
+      sessionStorage.removeItem('lalizaSettings');
+      // บันทึก cache ใหม่ทันที
+      sessionStorage.setItem('lalizaSettings', JSON.stringify({
+        docs: SETTINGS.docs, cas: SETTINGS.cas,
+        mgs: SETTINGS.mgs,  tgs: SETTINGS.tgs
+      }));
+      updateSelects();
+      curT1 = ""; curT3 = "";
+      toast("✅ บันทึกการตั้งค่าแล้ว — dropdown อัพเดทแล้ว");
+    });
+  });
+}
+
+function updateSelects() {
+  const dOpt = "<option value=''>-</option>"+SETTINGS.docs.map(x=>`<option value="${x}">${x}</option>`).join("");
+  document.querySelectorAll('select[id^="r-doc-"], select[id^="r-doc2-"], select[id^="df-doc-"], select[id^="df-doc2-"], #o-doc, #o-doc2').forEach(el=>{let val=el.value; el.innerHTML=dOpt; el.value=val;});
+  if(g("o-ca")) { let v=g("o-ca").value; g("o-ca").innerHTML="<option value=''>-</option>"+SETTINGS.cas.map(x=>`<option value="${x}">${x}</option>`).join(""); g("o-ca").value=v; }
+  if(g("o-mg")) { let v=g("o-mg").value; g("o-mg").innerHTML="<option value=''>-</option>"+SETTINGS.mgs.map(x=>`<option value="${x}">${x}</option>`).join(""); g("o-mg").value=v; }
+}
+
+// ============================================================
+// GOOGLE SHEET LINKS (ใส่ URL ของ Sheet ที่ผูกไว้)
+// ============================================================
+const GSHEET_URLS = {
+  t1: 'https://docs.google.com/spreadsheets/d/14WYXoyMJS0UYpBH-79RitJAZuEY880Gaz8JjePEkPUk/edit',
+  t2: '',
+  t3: 'https://docs.google.com/spreadsheets/d/1ECtupRbet4BPZrMoek8rikgfnJgMWkH2DJv484h3eCE/edit',
+  t4: 'https://docs.google.com/spreadsheets/d/16eA5PDhr0gIiFVXPeHquIvkvA8JzE-ZnUIpVyVyVTIw/edit',
+};
+
+const GAS_URLS = {
+  t1: 'https://script.google.com/macros/s/AKfycbzDbwHzucAPYj1cX7QLUHy7fbQCsesaowugBw27pwy9QmPH4Jd4vAl3K1OpHdZR7fYIqQ/exec',
+  t3: 'https://script.google.com/macros/s/AKfycbwbRw29zFf8L4IMpvntHIlc1PYxVmwm5Q7PrHFFKFZIJDlxPJJT4BZLHIEupOV-NnrB4w/exec',
+  t4: 'https://script.google.com/macros/s/AKfycbxvZtGhyltTT3hQd6wujVoLD0m43mcu60YPbRYO5J5Oks14-du016XtF6hQrxBfRCbQUg/exec',
+};
+
+// ============================================================
+// EXPORT PNG — ใช้ html2canvas ถ่าย element แล้ว download
+// ============================================================
+function exportPng(elementId, filename) {
+  const el = g(elementId);
+  if (!el) { alert('ไม่พบ element: ' + elementId); return; }
+
+  // ซ่อน no-print ชั่วคราว
+  const noPrints = document.querySelectorAll('.no-print');
+  noPrints.forEach(e => e.style.setProperty('display','none','important'));
+
+  // ขยาย element ให้เต็มก่อนถ่าย
+  const origOverflow = document.body.style.overflow;
+  document.body.style.overflow = 'visible';
+  const w = el.scrollWidth, h = el.scrollHeight;
+
+  html2canvas(el, {
+    scale: 2,
+    useCORS: true,
+    allowTaint: true,
+    backgroundColor: '#ffffff',
+    logging: false,
+    scrollX: -window.scrollX,
+    scrollY: -window.scrollY,
+    windowWidth: w,
+    windowHeight: h,
+    width: w,
+    height: h,
+  }).then(canvas => {
+    noPrints.forEach(e => e.style.removeProperty('display'));
+    document.body.style.overflow = origOverflow;
+    const link = document.createElement('a');
+    link.download = filename + '_' + new Date().toISOString().slice(0,10) + '.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  }).catch(err => {
+    noPrints.forEach(e => e.style.removeProperty('display'));
+    document.body.style.overflow = origOverflow;
+    alert('Export PNG ล้มเหลว: ' + err.message);
+  });
+}
+
+// ============================================================
+// GOOGLE SHEET — เปิด link ในแท็บใหม่
+// ============================================================
+// Auto-sync Revenue Sheet → Google Sheet (debounce 5s)
+let _syncTimer = null;
+function _autoSyncToSheet(dt, br) {
+  if (!GAS_URLS.t1) return;
+  const mo = dt.slice(0, 7);
+  clearTimeout(_syncTimer);
+  _syncTimer = setTimeout(() => {
+    const url = `${GAS_URLS.t1}?month=${mo}&branch=${br}`;
+    window.open(url, '_sync_' + br); // เปิดแท็บพื้นหลัง sync เอง
+    setTimeout(() => {
+      // ปิดแท็บ sync หลัง 3 วิ
+      try { } catch(e) {}
+    }, 3000);
+  }, 5000);
+}
+
+async function openGSheet(tab) {
+  const gasUrl = GAS_URLS[tab];
+  const sheetUrl = GSHEET_URLS[tab];
+  if (!gasUrl) { if(sheetUrl) window.open(sheetUrl,'_blank'); return; }
+
+  const brMap = {t1:'r-br', t3:'tk-br', t4:'df-br'};
+  const moMap = {t1:'r-mo', t3:'tk-mo', t4:'df-mo'};
+  const br = g(brMap[tab])?.value || 'all';
+  const mo = g(moMap[tab])?.value || new Date().toISOString().slice(0,7);
+
+  // เปิด Apps Script URL ในแท็บใหม่ให้ทำงานเอง แล้วเปิด Sheet
+  const syncUrl = `${gasUrl}?month=${mo}&branch=${br}`;
+  toast('⏳ กำลัง sync... Sheet จะเปิดใน 3 วินาที');
+  window.open(syncUrl, '_blank');  // Apps Script รันเอง
+  setTimeout(() => {
+    if(sheetUrl) window.open(sheetUrl, '_blank');
+    toast('✅ เปิด Sheet แล้ว — รอสักครู่ให้ข้อมูลอัพเดท');
+  }, 3000);
+}
+
+</script>
+</body>
+</html>
