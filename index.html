@@ -2059,7 +2059,7 @@ th.today-col {
             <button class="btn btn-primary btn-sm" style="margin-left:6px" onclick="saveNameEdit()">บันทึก</button>
             <button class="btn btn-ghost btn-sm" style="margin-left:4px" onclick="cancelNameEdit()">ยกเลิก</button>
           </div>
-          <div style="display:flex;align-items:center;gap:6px;margin-top:2px;">
+          <div id="periodNavBar" style="display:flex;align-items:center;gap:6px;margin-top:2px;">
             <button onclick="changePeriod(-1)" style="width:24px;height:24px;border-radius:50%;border:1px solid var(--border);background:var(--s2);color:var(--muted);font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;">◀</button>
             <div class="topbar-sub" id="topSub" style="margin-top:0;">—</div>
             <button onclick="changePeriod(1)" style="width:24px;height:24px;border-radius:50%;border:1px solid var(--border);background:var(--s2);color:var(--muted);font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;">▶</button>
@@ -7156,17 +7156,17 @@ function updateNavForBranch(){
     show('nav-admin',isAdmin);
     show('bn-overview',true); show('bn-table',false); show('bn-tableAll',true);
     show('bn-dashboard',true); show('bn-mgrleave',true); show('bn-stats',true);
-    // ════ ซ่อน Doctor Portal ทั้งหมด ════
-    show('nav-doctor-section', false);
-    show('nav-doctors', false);
-    show('nav-roster', false);
-    show('nav-docdefault', false);
-    show('nav-docsub', false);
-    show('nav-docfee', false);
-    show('nav-docwelfare', false);
-    show('nav-docpay', false);
-    show('nav-docdash2', false);
-    show('nav-docdash', false);
+    // ════ แสดง Doctor Portal สำหรับ b9 ด้วย ════
+    show('nav-doctor-section', true);
+    show('nav-doctors', true);
+    show('nav-roster', true);
+    show('nav-docdefault', true);
+    show('nav-docsub', true);
+    show('nav-docfee', true);
+    show('nav-docwelfare', true);
+    show('nav-docpay', true);
+    show('nav-docdash2', true);
+    show('nav-docdash', true);
   } else {
     show('nav-overview', hasPerm('overview', true));
     show('nav-table',    hasPerm('table', true));
@@ -7301,13 +7301,11 @@ function showDoctorPortal(){
   // แสดง sidebar แต่ซ่อน nav ที่ไม่เกี่ยว
   document.querySelectorAll('.nav-item').forEach(el=>el.style.display='none');
   // แสดงเฉพาะ nav ของแพทย์
-  // Doctor Portal — แสดงเฉพาะ non-b9
-  if(!isGlobalBranch()){
-    ['nav-doctor-section','nav-roster','nav-docdefault','nav-docsub','nav-docfee','nav-docwelfare','nav-docpay','nav-docdash2','nav-docdash','nav-doctors'].forEach(id=>{
-      const el = document.getElementById(id);
-      if(el) el.style.display='';
-    });
-  }
+  // Doctor Portal — แสดงทุก branch รวม 16698
+  ['nav-doctor-section','nav-roster','nav-docdefault','nav-docsub','nav-docfee','nav-docwelfare','nav-docpay','nav-docdash2','nav-docdash','nav-doctors'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.style.display='';
+  });
   // Admin/HR เห็นทะเบียนแพทย์ด้วย
   if(session.isAdmin||session.branchId==='b10'){
     const navDoc = document.getElementById('nav-doctors');
