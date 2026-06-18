@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Clinical Training Hub</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <section id="loginScreen" class="login-screen">
+    <div class="login-card">
+      <div class="brand login-brand">
+        <div class="brand-mark">DT</div>
+        <div>
+          <strong>Clinical Training Hub</strong>
+          <span>Doctor access</span>
+        </div>
+      </div>
+      <div>
+        <p class="eyebrow">Secure Access</p>
+        <h1>เข้าสู่ระบบแพทย์</h1>
+        <p class="login-copy">เลือกชื่อแพทย์จากฐานข้อมูล และใช้รหัสส่วนตัวสำหรับเข้าใช้งานหลักสูตรอบรม</p>
+      </div>
+      <form id="loginForm" class="login-form">
+        <label>แพทย์
+          <select name="doctorId" id="loginDoctorSelect"></select>
+        </label>
+        <label id="loginCodeField">รหัสเข้าใช้งาน
+          <input name="code" id="loginCodeInput" type="password" inputmode="numeric" autocomplete="current-password" placeholder="ใส่ PIN หรือรหัสเริ่มต้น" required>
+        </label>
+        <label id="newPinField" hidden>ตั้ง PIN ส่วนตัว
+          <input name="newPin" id="newPinInput" type="password" inputmode="numeric" autocomplete="new-password" placeholder="4-6 หลัก">
+        </label>
+        <label id="confirmPinField" hidden>ยืนยัน PIN
+          <input name="confirmPin" id="confirmPinInput" type="password" inputmode="numeric" autocomplete="new-password" placeholder="ใส่ PIN อีกครั้ง">
+        </label>
+        <div id="loginHint" class="login-hint">เข้าใช้ครั้งแรกให้ใช้รหัสเริ่มต้นที่ Admin แจ้งไว้</div>
+        <button id="loginSubmitBtn" class="primary-button" type="submit">เข้าสู่ระบบ</button>
+      </form>
+    </div>
+  </section>
+
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark">DT</div>
+        <div>
+          <strong>Clinical Training Hub</strong>
+          <span>Governance & Assessment</span>
+        </div>
+      </div>
+
+      <nav class="nav-tabs" aria-label="Main views">
+        <button class="nav-tab active" type="button" data-view="learn" title="Training">
+          <span aria-hidden="true">▸</span>
+          <span>หลักสูตร</span>
+        </button>
+        <button class="nav-tab" type="button" data-view="dashboard" title="รายงานผล">
+          <span aria-hidden="true">▦</span>
+          <span>รายงานผล</span>
+        </button>
+        <button class="nav-tab" type="button" data-view="admin" title="จัดการระบบ">
+          <span aria-hidden="true">✚</span>
+          <span>จัดการระบบ</span>
+        </button>
+      </nav>
+
+      <div class="profile-box">
+        <label for="doctorSelect">บัญชีแพทย์</label>
+        <select id="doctorSelect"></select>
+        <button id="logoutBtn" class="sidebar-action" type="button">ออกจากระบบ</button>
+      </div>
+    </aside>
+
+    <main>
+      <section id="learnView" class="view active">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">Clinical Training</p>
+            <h1>หลักสูตรอบรมและแบบประเมินแพทย์</h1>
+          </div>
+          <div class="status-pill" id="currentStatus">พร้อมเริ่มหลักสูตร</div>
+        </header>
+
+        <div class="learn-layout">
+          <section class="panel course-panel">
+            <div class="panel-head">
+              <h2>หลักสูตรที่ได้รับมอบหมาย</h2>
+              <select id="courseSelect"></select>
+            </div>
+            <div id="courseList" class="course-list"></div>
+          </section>
+
+          <section class="panel lesson-panel">
+            <div class="panel-head compact">
+              <div>
+                <h2 id="lessonTitle">เลือกหลักสูตร</h2>
+                <p id="lessonMeta">รายละเอียดหลักสูตรจะแสดงตรงนี้</p>
+              </div>
+              <button id="markWatchedBtn" class="mark-complete-button" type="button" title="บันทึกว่าอบรมเนื้อหาแล้ว">บันทึกการรับชม</button>
+            </div>
+
+            <div class="video-frame">
+              <iframe id="lessonVideo" title="Training video" allowfullscreen></iframe>
+            </div>
+
+            <form id="quizForm" class="quiz-form"></form>
+          </section>
+        </div>
+      </section>
+
+      <section id="dashboardView" class="view">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">Training Records</p>
+            <h1>รายงานผลการอบรมและ Assessment</h1>
+          </div>
+          <button id="exportCsvBtn" class="primary-button" type="button">Export CSV</button>
+        </header>
+
+        <div class="metric-grid" id="metricGrid"></div>
+        <section class="panel">
+          <div class="panel-head">
+            <h2>Training completion log</h2>
+            <input id="resultSearch" type="search" placeholder="ค้นหาแพทย์ สาขา หรือหลักสูตร">
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>แพทย์</th>
+                  <th>สาขา</th>
+                  <th>หลักสูตร</th>
+                  <th>เนื้อหา</th>
+                  <th>คะแนน</th>
+                  <th>สถานะ</th>
+                  <th>วันที่ล่าสุด</th>
+                </tr>
+              </thead>
+              <tbody id="resultsTable"></tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+
+      <section id="adminView" class="view">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">Program Management</p>
+            <h1>จัดการหลักสูตรและแบบประเมิน</h1>
+          </div>
+          <button id="resetDemoBtn" class="ghost-button" type="button">Reset Demo</button>
+        </header>
+
+        <div class="admin-layout">
+          <form id="courseForm" class="panel admin-form">
+            <div class="panel-head compact">
+              <h2>เพิ่มหลักสูตร</h2>
+            </div>
+            <label>ชื่อหลักสูตร
+              <input name="title" required placeholder="เช่น Protocol Filler Safety">
+            </label>
+            <label>หมวดหมู่
+              <input name="category" required placeholder="Clinical / Product / Safety">
+            </label>
+            <label>ลิงก์วิดีโอ
+              <input name="videoUrl" required placeholder="YouTube embed หรือ watch URL">
+            </label>
+            <label>เกณฑ์ผ่าน (%)
+              <input name="passScore" type="number" min="1" max="100" value="80" required>
+            </label>
+            <label>คำอธิบาย
+              <textarea name="description" rows="3" placeholder="วัตถุประสงค์และขอบเขตของหลักสูตร"></textarea>
+            </label>
+            <button class="primary-button" type="submit">บันทึกหลักสูตร</button>
+          </form>
+
+          <form id="questionForm" class="panel admin-form">
+            <div class="panel-head compact">
+              <h2>เพิ่มคำถาม Assessment</h2>
+            </div>
+            <label>หลักสูตร
+              <select name="courseId" id="questionCourseSelect"></select>
+            </label>
+            <label>ประเภทคำถาม
+              <select name="type" id="questionTypeSelect">
+                <option value="single_choice">ตัวเลือกเดียว</option>
+                <option value="true_false">ถูก / ผิด</option>
+              </select>
+            </label>
+            <label>คำถาม
+              <textarea name="prompt" rows="3" required></textarea>
+            </label>
+            <label data-option-field="a">ตัวเลือก A
+              <input name="optionA" required>
+            </label>
+            <label data-option-field="b">ตัวเลือก B
+              <input name="optionB" required>
+            </label>
+            <label data-option-field="c">ตัวเลือก C
+              <input name="optionC">
+            </label>
+            <label>คำตอบที่ถูก
+              <select name="correctIndex" id="correctIndexSelect">
+                <option value="0">A</option>
+                <option value="1">B</option>
+                <option value="2">C</option>
+              </select>
+            </label>
+            <label>คะแนนข้อนี้
+              <input name="points" type="number" min="1" max="10" value="1" required>
+            </label>
+            <label>สถานะ
+              <select name="status">
+                <option value="published">Published</option>
+                <option value="draft">Draft</option>
+              </select>
+            </label>
+            <button class="primary-button" type="submit">บันทึกคำถาม</button>
+          </form>
+
+          <section class="panel assessment-manager">
+            <div class="panel-head">
+              <div>
+                <h2>Assessment Library</h2>
+                <p>จัดการคำถามและสถานะเผยแพร่ของแต่ละหลักสูตร</p>
+              </div>
+              <select id="assessmentCourseFilter"></select>
+            </div>
+            <div class="assessment-grid">
+              <div id="questionList" class="question-list"></div>
+              <div class="preview-pane">
+                <h3>Preview</h3>
+                <div id="assessmentPreview"></div>
+              </div>
+            </div>
+          </section>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <template id="questionTemplate">
+    <fieldset class="question-card">
+      <legend></legend>
+      <div class="option-stack"></div>
+    </fieldset>
+  </template>
+
+  <script src="./app.js"></script>
+</body>
+</html>
